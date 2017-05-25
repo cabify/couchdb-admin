@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb2-replica
+spec:
+  type: LoadBalancer
+  selector:
+    app: couchdb2-replica-node
+  ports:
+    - port: 5984
+      name: couchdb
+    - port: 5986
+      name: backdoor
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: couch
+spec:
+  replicas: 3
+  serviceName: couchdb2-replica
+  template:
+    metadata:
+      labels:
+        app: couchdb2-replica-node
+    spec:
+      containers:
+        - name: couchdb2
+          image: klaemo/couchdb:2.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: couchdb
+              containerPort: 5984
+            - name: backdoor
+              containerPort: 5986
+            - name: epmd
+              containerPort: 4396
+            - containerPort: 9100
+          env:
+            - name: NODENAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: COUCHDB_USER
+              value: admin
+            - name: COUCHDB_PASSWORD
+              value: password
