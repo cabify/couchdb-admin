@@ -46,3 +46,5 @@ spec:
               value: admin
             - name: COUCHDB_PASSWORD
               value: password
+            - name: ERL_FLAGS
+              value: "-setcookie cabifycouchdbreplica"
