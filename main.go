@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/cabify/couchdb-admin/cluster"
+	"github.com/cabify/couchdb-admin/http_utils"
 	"github.com/kr/pretty"
 	"github.com/urfave/cli"
 )
@@ -22,8 +24,7 @@ type Data struct {
 	ByRange   map[string][]string `json:"by_range"`
 }
 
-var httpClient *http.Client
-var server, username, password string
+var server string
 
 func main() {
 	app := cli.NewApp()
@@ -40,13 +41,13 @@ func main() {
 			Name:        "admin",
 			Usage:       "Admin of the DB",
 			Value:       "admin",
-			Destination: &username,
+			Destination: &http_utils.Username,
 		},
 		cli.StringFlag{
 			Name:        "password",
 			Usage:       "Password for the db's admin",
 			Value:       "password",
-			Destination: &password,
+			Destination: &http_utils.Password,
 		},
 	}
 
@@ -83,7 +84,7 @@ func main() {
 		{
 			Name: "add_node",
 			Action: func(c *cli.Context) error {
-				LoadCluster(server).addNode(server, c.String("node"))
+				cluster.LoadCluster(server).AddNode(server, c.String("node"))
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -96,7 +97,7 @@ func main() {
 		{
 			Name: "describe_cluster",
 			Action: func(c *cli.Context) error {
-				describeCluster()
+				cluster.LoadCluster(server)
 				return nil
 			},
 		},
@@ -120,34 +121,11 @@ func main() {
 		},
 	}
 
-	httpClient = &http.Client{
+	http_utils.HttpClient = &http.Client{
 		Timeout: time.Second * 10,
 	}
 
 	app.Run(os.Args)
-}
-
-func runRequest(req *http.Request, dest interface{}) {
-	req.SetBasicAuth(username, password)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if resp.StatusCode/100 != 2 {
-		log.Printf("Received response %d for %s", resp.StatusCode, req.URL.String())
-	}
-
-	defer resp.Body.Close()
-
-	if dest != nil {
-		if err = json.NewDecoder(resp.Body).Decode(dest); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		fmt.Println(resp)
-	}
 }
 
 func getDbConfig(db string) (data Data) {
@@ -156,7 +134,7 @@ func getDbConfig(db string) (data Data) {
 		log.Fatal(err)
 	}
 
-	runRequest(req, &data)
+	http_utils.RunRequest(req, &data)
 
 	return
 }
@@ -185,7 +163,7 @@ func replicate(c *cli.Context) error {
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", server, db), bytes.NewBuffer(b))
 	req.Header.Set("Content-Type", "application/json")
 
-	runRequest(req, nil)
+	http_utils.RunRequest(req, nil)
 
 	return nil
 }
@@ -200,7 +178,7 @@ func createDatabase(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	runRequest(req, nil)
+	http_utils.RunRequest(req, nil)
 
 	return nil
 }
