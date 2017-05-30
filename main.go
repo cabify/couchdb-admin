@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/kr/pretty"
@@ -21,11 +20,6 @@ type Data struct {
 	Changelog [][]string          `json:"changelog"`
 	ByNode    map[string][]string `json:"by_node"`
 	ByRange   map[string][]string `json:"by_range"`
-}
-
-type ClusterLayout struct {
-	AllNodes     []string `json:"all_nodes"`
-	ClusterNodes []string `json:"cluster_nodes"`
 }
 
 var httpClient *http.Client
@@ -87,8 +81,11 @@ func main() {
 			},
 		},
 		{
-			Name:   "add_node",
-			Action: addNode,
+			Name: "add_node",
+			Action: func(c *cli.Context) error {
+				LoadCluster(server).addNode(server, c.String("node"))
+				return nil
+			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name: "node",
@@ -164,24 +161,6 @@ func getDbConfig(db string) (data Data) {
 	return
 }
 
-func addNode(c *cli.Context) error {
-	node := fmt.Sprintf("couchdb@%s", c.String("node"))
-
-	describeCluster()
-
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", server, node), strings.NewReader("{}"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	runRequest(req, nil)
-
-	describeCluster()
-
-	return nil
-}
-
 func describeDb(c *cli.Context) {
 	data := getDbConfig(c.String("db"))
 	fmt.Printf("%# v", pretty.Formatter(data))
@@ -209,19 +188,6 @@ func replicate(c *cli.Context) error {
 	runRequest(req, nil)
 
 	return nil
-}
-
-func describeCluster() {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", server), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var cluster ClusterLayout
-
-	runRequest(req, &cluster)
-
-	fmt.Println("Current cluster layout")
-	fmt.Printf("%+v\n", cluster)
 }
 
 func createDatabase(c *cli.Context) error {
