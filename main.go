@@ -141,7 +141,7 @@ func getDbConfig(db string) (data Data) {
 
 func describeDb(c *cli.Context) {
 	data := getDbConfig(c.String("db"))
-	fmt.Printf("%# v", pretty.Formatter(data))
+	pretty.Println(data)
 }
 
 func replicate(c *cli.Context) error {

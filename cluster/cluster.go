@@ -34,11 +34,11 @@ func (c *Cluster) refreshNodesInfo(server string) {
 
 	var info Nodes
 	http_utils.RunRequest(req, &info)
-	fmt.Printf("%# v", pretty.Formatter(c))
+	pretty.Println(c)
 	c.NodesInfo = info
 
 	fmt.Println("Current cluster layout")
-	fmt.Printf("%# v", pretty.Formatter(c.NodesInfo))
+	pretty.Println(c.NodesInfo)
 }
 
 func (cluster *Cluster) knowsNode(node string) bool {
