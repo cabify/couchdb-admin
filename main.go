@@ -102,11 +102,11 @@ func main() {
 			},
 		},
 		{
-			Name:   "create_database",
+			Name:   "create_db",
 			Action: createDatabase,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "name",
+					Name: "db",
 					// TODO this should be required
 				},
 				cli.IntFlag{
@@ -171,7 +171,7 @@ func replicate(c *cli.Context) error {
 func createDatabase(c *cli.Context) error {
 	replicas := c.Int("replicas")
 	shards := c.Int("shards")
-	db := c.String("name")
+	db := c.String("db")
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", server, db, replicas, shards), nil)
 	if err != nil {

@@ -17,8 +17,20 @@ spec:
   ports:
     - port: 5984
       name: couchdb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb2-replica-admin
+spec:
+  selector:
+    app: couchdb2-replica-node
+  ports:
+    - port: 5984
+      name: couchdb
     - port: 5986
       name: backdoor
+  clusterIP: None
 ---
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -26,7 +38,7 @@ metadata:
   name: couch
 spec:
   replicas: 3
-  serviceName: couchdb2-replica
+  serviceName: couchdb2-replica-admin
   template:
     metadata:
       labels:
@@ -45,16 +57,22 @@ spec:
               containerPort: 4396
             - containerPort: 9100
           env:
-            - name: NODENAME
+            - name: NAME
               valueFrom:
                 fieldRef:
-                  fieldPath: status.podIP
+                  fieldPath: metadata.name
             - name: COUCHDB_USER
-              value: admin
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-admin-credentials
+                  key: username
             - name: COUCHDB_PASSWORD
-              value: password
+              valueFrom:
+                secretKeyRef:
+                    name: couchdb-admin-credentials
+                    key: password
             - name: ERL_FLAGS
-              value: "-setcookie cabifycouchdbreplica"
+              value: "-setcookie cabifycouchdbreplica -name couchdb@$(NAME).couchdb2-replica-admin"
           volumeMounts:
             - mountPath: /opt/couchdb/data
               name: data-dir
