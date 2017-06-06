@@ -1,0 +1,10 @@
+hash: c4247a252248e319eeb064c5bf66e1b8096bbcbc7c51a8f0bdb730e43e58a168
+updated: 2017-06-06T23:20:54.930276584+02:00
+imports:
+- name: github.com/kr/pretty
+  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
+- name: github.com/kr/text
+  version: 7cafcd837844e784b526369c9bce262804aebc60
+- name: github.com/urfave/cli
+  version: d70f47eeca3afd795160003bc6e28b001d60c67c
+testImports: []
