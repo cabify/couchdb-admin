@@ -1,0 +1,4 @@
+package: github.com/cabify/couchdb-admin
+import:
+- package: github.com/kr/pretty
+- package: github.com/urfave/cli
