@@ -4,3 +4,4 @@ import:
 - package: github.com/urfave/cli
 testImport:
 - package: github.com/stretchr/testify/assert
+- package: gopkg.in/jarcoal/httpmock.v1
