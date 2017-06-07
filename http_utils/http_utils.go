@@ -5,21 +5,36 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
-var HttpClient *http.Client
-var Username, Password string
+type AuthenticatedHttpRequester struct {
+	server, username, password string
+	httpClient                 *http.Client
+}
 
-func RunRequest(req *http.Request, dest interface{}) {
-	req.SetBasicAuth(Username, Password)
+func NewAuthenticatedHttpRequester(username, password, server string) (ahr *AuthenticatedHttpRequester) {
+	ahr = &AuthenticatedHttpRequester{
+		server:   server,
+		username: username,
+		password: password,
+		httpClient: &http.Client{
+			Timeout: time.Second * 10,
+		},
+	}
+	return
+}
 
-	resp, err := HttpClient.Do(req)
+func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interface{}) {
+	req.SetBasicAuth(a.username, a.password)
+
+	resp, err := a.httpClient.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if resp.StatusCode/100 != 2 {
-		log.Printf("Received response %d for %s", resp.StatusCode, req.URL.String())
+		log.Fatalf("Received response %d for %s", resp.StatusCode, req.URL.String())
 	}
 
 	defer resp.Body.Close()
@@ -29,6 +44,10 @@ func RunRequest(req *http.Request, dest interface{}) {
 			log.Fatal(err)
 		}
 	} else {
-		fmt.Println(resp)
+		fmt.Printf("Response empty: %v\n", resp)
 	}
+}
+
+func (a *AuthenticatedHttpRequester) GetServer() string {
+	return a.server
 }

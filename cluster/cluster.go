@@ -20,20 +20,20 @@ type Nodes struct {
 	ClusterNodes []string `json:"cluster_nodes"`
 }
 
-func LoadCluster(server string) *Cluster {
+func LoadCluster(ahr *http_utils.AuthenticatedHttpRequester) *Cluster {
 	cluster := &Cluster{}
-	cluster.refreshNodesInfo(server)
+	cluster.refreshNodesInfo(ahr)
 	return cluster
 }
 
-func (c *Cluster) refreshNodesInfo(server string) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", server), nil)
+func (c *Cluster) refreshNodesInfo(ahr *http_utils.AuthenticatedHttpRequester) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.GetServer()), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var info Nodes
-	http_utils.RunRequest(req, &info)
+	ahr.RunRequest(req, &info)
 	pretty.Println(c)
 	c.NodesInfo = info
 
@@ -50,8 +50,8 @@ func (cluster *Cluster) knowsNode(node string) bool {
 	return false
 }
 
-func getLastRevForNode(server, node string) string {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", server, node), nil)
+func getLastRevForNode(node string, ahr *http_utils.AuthenticatedHttpRequester) string {
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,16 +60,20 @@ func getLastRevForNode(server, node string) string {
 		Rev string `json:"_rev"`
 	}{}
 
-	http_utils.RunRequest(req, &nodeDetails)
+	ahr.RunRequest(req, &nodeDetails)
 	return nodeDetails.Rev
 }
 
-func (cluster *Cluster) AddNode(server, nodeAddr string) error {
+func (cluster *Cluster) AddNode(nodeAddr string, ahr *http_utils.AuthenticatedHttpRequester) error {
 	node := fmt.Sprintf("couchdb@%s", nodeAddr)
+
+	if cluster.isNodeUpAndJoined(node) {
+		return fmt.Errorf("Node: %s is already part of the cluster!", node)
+	}
 
 	body := make(map[string]string)
 	if cluster.knowsNode(node) {
-		body["_rev"] = getLastRevForNode(server, node)
+		body["_rev"] = getLastRevForNode(node, ahr)
 	}
 
 	body_bytes, err := json.Marshal(body)
@@ -77,16 +81,25 @@ func (cluster *Cluster) AddNode(server, nodeAddr string) error {
 		log.Fatal(err)
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", server, node), bytes.NewReader(body_bytes))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), bytes.NewReader(body_bytes))
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	http_utils.RunRequest(req, nil)
+	ahr.RunRequest(req, nil)
 
-	cluster.refreshNodesInfo(server)
+	cluster.refreshNodesInfo(ahr)
 
 	return nil
+}
+
+func (cluster *Cluster) isNodeUpAndJoined(node string) bool {
+	for _, n := range cluster.NodesInfo.AllNodes {
+		if node == n {
+			return cluster.knowsNode(node)
+		}
+	}
+	return false
 }

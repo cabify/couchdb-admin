@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
+	"github.com/cabify/couchdb-admin/array_utils"
 	"github.com/cabify/couchdb-admin/cluster"
 	"github.com/cabify/couchdb-admin/http_utils"
 	"github.com/kr/pretty"
@@ -24,30 +24,25 @@ type Data struct {
 	ByRange   map[string][]string `json:"by_range"`
 }
 
-var server string
-
 func main() {
 	app := cli.NewApp()
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:        "server",
-			Usage:       "The server to connect to",
-			Value:       "127.0.0.1",
-			Destination: &server,
+			Name:  "server",
+			Usage: "The server to connect to",
+			Value: "127.0.0.1",
 			// TODO this should be required
 		},
 		cli.StringFlag{
-			Name:        "admin",
-			Usage:       "Admin of the DB",
-			Value:       "admin",
-			Destination: &http_utils.Username,
+			Name:  "admin",
+			Usage: "Admin of the DB",
+			Value: "admin",
 		},
 		cli.StringFlag{
-			Name:        "password",
-			Usage:       "Password for the db's admin",
-			Value:       "password",
-			Destination: &http_utils.Password,
+			Name:  "password",
+			Usage: "Password for the db's admin",
+			Value: "password",
 		},
 	}
 
@@ -84,7 +79,8 @@ func main() {
 		{
 			Name: "add_node",
 			Action: func(c *cli.Context) error {
-				cluster.LoadCluster(server).AddNode(server, c.String("node"))
+				ahr := buildAuthHttpReq(c)
+				cluster.LoadCluster(ahr).AddNode(c.String("node"), ahr)
 				return nil
 			},
 			Flags: []cli.Flag{
@@ -97,7 +93,7 @@ func main() {
 		{
 			Name: "describe_cluster",
 			Action: func(c *cli.Context) error {
-				cluster.LoadCluster(server)
+				cluster.LoadCluster(buildAuthHttpReq(c))
 				return nil
 			},
 		},
@@ -119,40 +115,60 @@ func main() {
 				},
 			},
 		},
-	}
-
-	http_utils.HttpClient = &http.Client{
-		Timeout: time.Second * 10,
+		{
+			Name:   "remove_replica",
+			Action: removeReplica,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name: "db",
+					// TODO this should be required
+				},
+				cli.StringFlag{
+					Name: "shard",
+					// TODO this should be required
+				},
+				cli.StringFlag{
+					Name: "from",
+					// TODO this should be required
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)
 }
 
-func getDbConfig(db string) (data Data) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", server, db), nil)
+func buildAuthHttpReq(c *cli.Context) *http_utils.AuthenticatedHttpRequester {
+	return http_utils.NewAuthenticatedHttpRequester(c.GlobalString("username"), c.GlobalString("password"), c.GlobalString("server"))
+}
+
+func getDbConfig(db string, ahr *http_utils.AuthenticatedHttpRequester) (data Data) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	http_utils.RunRequest(req, &data)
+	ahr.RunRequest(req, &data)
 
 	return
 }
 
 func describeDb(c *cli.Context) {
-	data := getDbConfig(c.String("db"))
+	data := getDbConfig(c.String("db"), buildAuthHttpReq(c))
 	pretty.Println(data)
 }
 
 func replicate(c *cli.Context) error {
+	ahr := buildAuthHttpReq(c)
 	db := c.String("db")
-	data := getDbConfig(db)
+	data := getDbConfig(db, ahr)
 
 	replica := fmt.Sprintf("couchdb@%s", c.String("replica"))
 	shard := c.String("shard")
 
 	data.ByNode[replica] = append(data.ByNode[replica], shard)
 	data.ByRange[shard] = append(data.ByRange[shard], replica)
+	// TODO add an entry to the changes section.
 	fmt.Printf("%+v\n", data)
 
 	b, err := json.Marshal(data)
@@ -160,25 +176,56 @@ func replicate(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", server, db), bytes.NewBuffer(b))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db), bytes.NewBuffer(b))
 	req.Header.Set("Content-Type", "application/json")
 
-	http_utils.RunRequest(req, nil)
+	ahr.RunRequest(req, nil)
+
+	return nil
+}
+
+func removeReplica(c *cli.Context) error {
+	ahr := buildAuthHttpReq(c)
+	db := c.String("db")
+	shard := c.String("shard")
+	replica := fmt.Sprintf("couchdb@%s", c.String("from"))
+
+	data := getDbConfig(db, ahr)
+
+	data.ByNode[replica] = array_utils.RemoveItem(data.ByNode[replica], shard)
+	if len(data.ByNode[replica]) == 0 {
+		delete(data.ByNode, replica)
+	}
+
+	data.ByRange[shard] = array_utils.RemoveItem(data.ByRange[shard], replica)
+	// TODO add an entry to the changes section.
+	fmt.Printf("%+v\n", data)
+
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db), bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	ahr.RunRequest(req, nil)
 
 	return nil
 }
 
 func createDatabase(c *cli.Context) error {
+	ahr := buildAuthHttpReq(c)
 	replicas := c.Int("replicas")
 	shards := c.Int("shards")
 	db := c.String("db")
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", server, db, replicas, shards), nil)
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.GetServer(), db, replicas, shards), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	http_utils.RunRequest(req, nil)
+	ahr.RunRequest(req, nil)
 
 	return nil
 }
