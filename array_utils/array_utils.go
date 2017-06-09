@@ -9,3 +9,12 @@ func RemoveItem(array []string, item string) []string {
 	}
 	return temp
 }
+
+func Contains(array []string, item string) bool {
+	for _, a := range array {
+		if item == a {
+			return true
+		}
+	}
+	return false
+}

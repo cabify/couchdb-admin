@@ -67,7 +67,7 @@ func getLastRevForNode(node string, ahr *http_utils.AuthenticatedHttpRequester) 
 func (cluster *Cluster) AddNode(nodeAddr string, ahr *http_utils.AuthenticatedHttpRequester) error {
 	node := fmt.Sprintf("couchdb@%s", nodeAddr)
 
-	if cluster.isNodeUpAndJoined(node) {
+	if cluster.IsNodeUpAndJoined(node) {
 		return fmt.Errorf("Node: %s is already part of the cluster!", node)
 	}
 
@@ -95,7 +95,7 @@ func (cluster *Cluster) AddNode(nodeAddr string, ahr *http_utils.AuthenticatedHt
 	return nil
 }
 
-func (cluster *Cluster) isNodeUpAndJoined(node string) bool {
+func (cluster *Cluster) IsNodeUpAndJoined(node string) bool {
 	for _, n := range cluster.NodesInfo.AllNodes {
 		if node == n {
 			return cluster.knowsNode(node)
