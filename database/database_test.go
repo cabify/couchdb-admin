@@ -135,7 +135,7 @@ func TestReplicateAddsReplicaToNode(t *testing.T) {
 			body := Config{}
 
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-				assert.Error(t, err)
+				t.Error(err)
 			}
 
 			assert.Equal(t, body.ByNode, map[string][]string{
@@ -159,7 +159,7 @@ func TestReplicateAddsReplicaToNode(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]}`))
 
 	if err := db.Replicate("00000000-7fffffff", "127.0.0.2", ahr); err != nil {
-		assert.Error(t, err)
+		t.Error(err)
 	}
 
 	assert.Equal(t, db.name, "testdb")
@@ -208,9 +208,8 @@ func TestReplicateFailsIfNodeIsAlreadyReplica(t *testing.T) {
 	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
-	if err := db.Replicate("00000000-7fffffff", "127.0.0.1", ahr); err == nil {
-		assert.FailNow(t, "Replica should have been rejected as 127.0.0.1 already contains a replica for the shard")
-	}
+	err := db.Replicate("00000000-7fffffff", "127.0.0.1", ahr)
+	assert.Error(t, err, "Replica should have been rejected as 127.0.0.1 already contains a replica for the shard")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
 		"couchdb@127.0.0.1": []string{"00000000-7fffffff", "80000000-ffffffff"},
@@ -255,9 +254,8 @@ func TestReplicateFailsIfShardDoesNotExist(t *testing.T) {
 	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
-	if err := db.Replicate("dummy_shard", "127.0.0.1", ahr); err == nil {
-		assert.FailNow(t, "Replica should have been rejected as dummy_shard is not an existing DB shard")
-	}
+	err := db.Replicate("dummy_shard", "127.0.0.1", ahr)
+	assert.Error(t, err, "Replica should have been rejected as dummy_shard is not an existing DB shard")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
 		"couchdb@127.0.0.1": []string{"00000000-7fffffff", "80000000-ffffffff"},
@@ -307,9 +305,8 @@ func TestReplicateFailsIfNodeIsNotPartOfTheCluster(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
-	if err := db.Replicate("00000000-7fffffff", "dummy_server", ahr); err == nil {
-		assert.FailNow(t, "Replica should have been rejected as dummy_server is not part of the cluster")
-	}
+	err := db.Replicate("00000000-7fffffff", "dummy_server", ahr)
+	assert.Error(t, err, "Replica should have been rejected as dummy_server is not part of the cluster")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
 		"couchdb@127.0.0.1": []string{"00000000-7fffffff", "80000000-ffffffff"},
@@ -373,7 +370,7 @@ func TestRemoveReplicaWorks(t *testing.T) {
 			body := Config{}
 
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-				assert.Error(t, err)
+				t.Error(err)
 			}
 
 			assert.Equal(t, body.ByNode, map[string][]string{
@@ -389,7 +386,7 @@ func TestRemoveReplicaWorks(t *testing.T) {
 		})
 
 	if err := db.RemoveReplica("00000000-7fffffff", "127.0.0.2", ahr); err != nil {
-		assert.Error(t, err)
+		t.Error(err)
 	}
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
@@ -429,13 +426,11 @@ func TestRemoveReplicaFailsIfNodeDoesNotContainShard(t *testing.T) {
 	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
-	if err := db.RemoveReplica("dummy_replica", "127.0.0.1", ahr); err == nil {
-		assert.FailNow(t, "Remove replica operation should have been rejected as the replica does not exist!")
-	}
+	err := db.RemoveReplica("dummy_replica", "127.0.0.1", ahr)
+	assert.Error(t, err, "Remove replica operation should have been rejected as the replica does not exist!")
 
-	if err := db.RemoveReplica("80000000-ffffffff", "dummy_server", ahr); err == nil {
-		assert.FailNow(t, "Remove replica operation should have been rejected as the server does not exist!")
-	}
+	err = db.RemoveReplica("80000000-ffffffff", "dummy_server", ahr)
+	assert.Error(t, err, "Remove replica operation should have been rejected as the server does not exist!")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
 		"couchdb@127.0.0.1": []string{"00000000-7fffffff"},
@@ -472,9 +467,8 @@ func TestRemoveReplicaFailsIfShardWillBeLost(t *testing.T) {
 	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
-	if err := db.RemoveReplica("00000000-7fffffff", "127.0.0.1", ahr); err == nil {
-		assert.FailNow(t, "Remove replica operation should have been rejected as the replica will be lost!")
-	}
+	err := db.RemoveReplica("00000000-7fffffff", "127.0.0.1", ahr)
+	assert.Error(t, err, "Remove replica operation should have been rejected as the replica will be lost!")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
 		"couchdb@127.0.0.1": []string{"00000000-7fffffff"},
@@ -522,7 +516,7 @@ func TestRemoveReplicaRemovesNodeIfEmpty(t *testing.T) {
 			body := Config{}
 
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-				assert.Error(t, err)
+				t.Error(err)
 			}
 
 			assert.Equal(t, body.ByNode, map[string][]string{
@@ -536,7 +530,7 @@ func TestRemoveReplicaRemovesNodeIfEmpty(t *testing.T) {
 		})
 
 	if err := db.RemoveReplica("00000000-ffffffff", "127.0.0.2", ahr); err != nil {
-		assert.Error(t, err)
+		t.Error(err)
 	}
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{

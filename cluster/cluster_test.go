@@ -66,9 +66,8 @@ func TestAddNodeRejectsToAddAlreadyAddedNode(t *testing.T) {
 	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
-	if err := cluster.AddNode("127.0.0.1", ahr); err == nil {
-		assert.FailNow(t, "Node should be rejected as is already part of the cluster")
-	}
+	err := cluster.AddNode("127.0.0.1", ahr)
+	assert.Error(t, err, "Node should be rejected as is already part of the cluster")
 }
 
 func TestAddNodeRejoinsNode(t *testing.T) {
@@ -95,7 +94,7 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 			}{}
 
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-				assert.Error(t, err)
+				t.Error(err)
 			}
 
 			if body.Rev == "12345" {
@@ -110,7 +109,7 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"]}`))
 
 	if err := cluster.AddNode("111.222.333.444", ahr); err != nil {
-		assert.Error(t, err)
+		t.Error(err)
 	}
 
 	assert.Equal(t, cluster.NodesInfo.AllNodes, []string{"couchdb@127.0.0.1", "couchdb@111.222.333.444"})
