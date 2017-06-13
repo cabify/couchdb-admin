@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/httpUtils"
 	"github.com/stretchr/testify/assert"
 	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
@@ -41,7 +41,7 @@ func TestLoadDBLoadsDB(t *testing.T) {
 				"00000000-7fffffff": ["couchdb@127.0.0.1"],
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	assert.Equal(t, db.name, "testdb")
@@ -87,7 +87,7 @@ func TestCreateDatabaseWorks(t *testing.T) {
 				"00000000-7fffffff": ["couchdb@127.0.0.1"],
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := CreateDatabase("testdb", 1, 2, ahr)
 
 	assert.Equal(t, db.name, "testdb")
@@ -150,7 +150,7 @@ func TestReplicateAddsReplicaToNode(t *testing.T) {
 			return httpmock.NewStringResponse(200, ""), nil
 		})
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5984/_membership",
@@ -205,7 +205,7 @@ func TestReplicateFailsIfNodeIsAlreadyReplica(t *testing.T) {
 				"00000000-7fffffff": ["couchdb@127.0.0.1"],
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	err := db.Replicate("00000000-7fffffff", "127.0.0.1", ahr)
@@ -251,7 +251,7 @@ func TestReplicateFailsIfShardDoesNotExist(t *testing.T) {
 				"00000000-7fffffff": ["couchdb@127.0.0.1"],
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	err := db.Replicate("dummy_shard", "127.0.0.1", ahr)
@@ -297,7 +297,7 @@ func TestReplicateFailsIfNodeIsNotPartOfTheCluster(t *testing.T) {
 				"00000000-7fffffff": ["couchdb@127.0.0.1"],
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5984/_membership",
@@ -362,7 +362,7 @@ func TestRemoveReplicaWorks(t *testing.T) {
 				"00000000-7fffffff": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"],
 				"80000000-ffffffff": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]}}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5986/_dbs/testdb",
@@ -423,7 +423,7 @@ func TestRemoveReplicaFailsIfNodeDoesNotContainShard(t *testing.T) {
 			}
 		}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	err := db.RemoveReplica("dummy_replica", "127.0.0.1", ahr)
@@ -464,7 +464,7 @@ func TestRemoveReplicaFailsIfShardWillBeLost(t *testing.T) {
 			}
 		}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	err := db.RemoveReplica("00000000-7fffffff", "127.0.0.1", ahr)
@@ -508,7 +508,7 @@ func TestRemoveReplicaRemovesNodeIfEmpty(t *testing.T) {
 			}
 		}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	db := LoadDB("testdb", ahr)
 
 	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5986/_dbs/testdb",

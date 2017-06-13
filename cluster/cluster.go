@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/httpUtils"
 	"github.com/kr/pretty"
 )
 
@@ -20,13 +20,13 @@ type Nodes struct {
 	ClusterNodes []string `json:"cluster_nodes"`
 }
 
-func LoadCluster(ahr *http_utils.AuthenticatedHttpRequester) *Cluster {
+func LoadCluster(ahr *httpUtils.AuthenticatedHttpRequester) *Cluster {
 	cluster := &Cluster{}
 	cluster.refreshNodesInfo(ahr)
 	return cluster
 }
 
-func (c *Cluster) refreshNodesInfo(ahr *http_utils.AuthenticatedHttpRequester) {
+func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.GetServer()), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +50,7 @@ func (cluster *Cluster) knowsNode(node string) bool {
 	return false
 }
 
-func getLastRevForNode(node string, ahr *http_utils.AuthenticatedHttpRequester) string {
+func getLastRevForNode(node string, ahr *httpUtils.AuthenticatedHttpRequester) string {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -64,7 +64,7 @@ func getLastRevForNode(node string, ahr *http_utils.AuthenticatedHttpRequester) 
 	return nodeDetails.Rev
 }
 
-func (cluster *Cluster) AddNode(nodeAddr string, ahr *http_utils.AuthenticatedHttpRequester) error {
+func (cluster *Cluster) AddNode(nodeAddr string, ahr *httpUtils.AuthenticatedHttpRequester) error {
 	node := fmt.Sprintf("couchdb@%s", nodeAddr)
 
 	if cluster.IsNodeUpAndJoined(node) {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/cabify/couchdb-admin/cluster"
 	"github.com/cabify/couchdb-admin/database"
-	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/httpUtils"
 	"github.com/kr/pretty"
 	"github.com/urfave/cli"
 )
@@ -139,6 +139,6 @@ func main() {
 	app.Run(os.Args)
 }
 
-func buildAuthHttpReq(c *cli.Context) *http_utils.AuthenticatedHttpRequester {
-	return http_utils.NewAuthenticatedHttpRequester(c.GlobalString("username"), c.GlobalString("password"), c.GlobalString("server"))
+func buildAuthHttpReq(c *cli.Context) *httpUtils.AuthenticatedHttpRequester {
+	return httpUtils.NewAuthenticatedHttpRequester(c.GlobalString("username"), c.GlobalString("password"), c.GlobalString("server"))
 }

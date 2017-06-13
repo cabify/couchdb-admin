@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/cabify/couchdb-admin/cluster"
-	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/httpUtils"
 	"github.com/cabify/couchdb-admin/sliceUtils"
 )
 
@@ -26,7 +26,7 @@ type Config struct {
 	ByRange   map[string][]string `json:"by_range"`
 }
 
-func LoadDB(name string, ahr *http_utils.AuthenticatedHttpRequester) *Database {
+func LoadDB(name string, ahr *httpUtils.AuthenticatedHttpRequester) *Database {
 	db := &Database{
 		name: name,
 	}
@@ -34,7 +34,7 @@ func LoadDB(name string, ahr *http_utils.AuthenticatedHttpRequester) *Database {
 	return db
 }
 
-func CreateDatabase(name string, replicas, shards int, ahr *http_utils.AuthenticatedHttpRequester) *Database {
+func CreateDatabase(name string, replicas, shards int, ahr *httpUtils.AuthenticatedHttpRequester) *Database {
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.GetServer(), name, replicas, shards), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +45,7 @@ func CreateDatabase(name string, replicas, shards int, ahr *http_utils.Authentic
 	return LoadDB(name, ahr)
 }
 
-func (db *Database) refreshDbConfig(ahr *http_utils.AuthenticatedHttpRequester) {
+func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -54,7 +54,7 @@ func (db *Database) refreshDbConfig(ahr *http_utils.AuthenticatedHttpRequester) 
 	ahr.RunRequest(req, &db.config)
 }
 
-func (db *Database) Replicate(shard, replica string, ahr *http_utils.AuthenticatedHttpRequester) error {
+func (db *Database) Replicate(shard, replica string, ahr *httpUtils.AuthenticatedHttpRequester) error {
 	replicaNode := fmt.Sprintf("couchdb@%s", replica)
 
 	if sliceUtils.Contains(db.config.ByNode[replicaNode], shard) {
@@ -86,7 +86,7 @@ func (db *Database) Replicate(shard, replica string, ahr *http_utils.Authenticat
 	return nil
 }
 
-func (db *Database) RemoveReplica(shard, from string, ahr *http_utils.AuthenticatedHttpRequester) error {
+func (db *Database) RemoveReplica(shard, from string, ahr *httpUtils.AuthenticatedHttpRequester) error {
 	replica := fmt.Sprintf("couchdb@%s", from)
 
 	if _, exists := db.config.ByNode[replica]; !exists {

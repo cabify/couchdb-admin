@@ -8,7 +8,7 @@ import (
 
 	httpmock "gopkg.in/jarcoal/httpmock.v1"
 
-	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/httpUtils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +21,7 @@ func TestLoadClusterLoadsNodesInfo(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1","couchdb@127.0.0.1","couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1","couchdb@127.0.0.1","couchdb@127.0.0.1"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
 	assert.Equal(t, cluster.NodesInfo.AllNodes, []string{"couchdb@127.0.0.1", "couchdb@127.0.0.1", "couchdb@127.0.0.1"})
@@ -37,7 +37,7 @@ func TestAddNodeAddsNode(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
 	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5986/_nodes/couchdb@111.222.333.444",
@@ -63,7 +63,7 @@ func TestAddNodeRejectsToAddAlreadyAddedNode(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
 	err := cluster.AddNode("127.0.0.1", ahr)
@@ -79,7 +79,7 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5986/_nodes/couchdb@111.222.333.444",
