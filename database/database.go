@@ -7,9 +7,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/cabify/couchdb-admin/array_utils"
 	"github.com/cabify/couchdb-admin/cluster"
 	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/sliceUtils"
 )
 
 type Database struct {
@@ -55,22 +55,22 @@ func (db *Database) refreshDbConfig(ahr *http_utils.AuthenticatedHttpRequester) 
 }
 
 func (db *Database) Replicate(shard, replica string, ahr *http_utils.AuthenticatedHttpRequester) error {
-	replica_node := fmt.Sprintf("couchdb@%s", replica)
+	replicaNode := fmt.Sprintf("couchdb@%s", replica)
 
-	if array_utils.Contains(db.config.ByNode[replica_node], shard) {
-		return fmt.Errorf("%s is already replicating %s", replica_node, shard)
+	if sliceUtils.Contains(db.config.ByNode[replicaNode], shard) {
+		return fmt.Errorf("%s is already replicating %s", replicaNode, shard)
 	}
 
 	if _, exists := db.config.ByRange[shard]; !exists {
 		return fmt.Errorf("%s is not a %s's shard!", shard, db.name)
 	}
 
-	if !cluster.LoadCluster(ahr).IsNodeUpAndJoined(replica_node) {
-		return fmt.Errorf("%s is not part of the cluster!", replica_node)
+	if !cluster.LoadCluster(ahr).IsNodeUpAndJoined(replicaNode) {
+		return fmt.Errorf("%s is not part of the cluster!", replicaNode)
 	}
 
-	db.config.ByNode[replica_node] = append(db.config.ByNode[replica_node], shard)
-	db.config.ByRange[shard] = append(db.config.ByRange[shard], replica_node)
+	db.config.ByNode[replicaNode] = append(db.config.ByNode[replicaNode], shard)
+	db.config.ByRange[shard] = append(db.config.ByRange[shard], replicaNode)
 	// TODO add an entry to the changes section.
 
 	b, err := json.Marshal(db.config)
@@ -93,17 +93,17 @@ func (db *Database) RemoveReplica(shard, from string, ahr *http_utils.Authentica
 		return fmt.Errorf("%s does not have any replicas!", replica)
 	}
 
-	if !array_utils.Contains(db.config.ByNode[replica], shard) {
+	if !sliceUtils.Contains(db.config.ByNode[replica], shard) {
 		return fmt.Errorf("Shard %s is not at %s", shard, replica)
 	}
 
-	newRange := array_utils.RemoveItem(db.config.ByRange[shard], replica)
+	newRange := sliceUtils.RemoveItem(db.config.ByRange[shard], replica)
 	if len(newRange) == 0 {
 		return fmt.Errorf("Aborting. Shard %s will be lost if deleted!!", shard)
 	}
 	db.config.ByRange[shard] = newRange
 
-	newNode := array_utils.RemoveItem(db.config.ByNode[replica], shard)
+	newNode := sliceUtils.RemoveItem(db.config.ByNode[replica], shard)
 	if len(newNode) > 0 {
 		db.config.ByNode[replica] = newNode
 	} else {

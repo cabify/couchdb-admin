@@ -1,4 +1,4 @@
-package array_utils
+package sliceUtils
 
 func RemoveItem(array []string, item string) []string {
 	var temp []string
