@@ -170,6 +170,19 @@ func main() {
 				},
 			},
 		},
+		{
+			Name: "remove_node",
+			Action: func(c *cli.Context) error {
+				ahr := buildAuthHttpReq(c)
+				return couchdb_admin.LoadCluster(ahr).RemoveNode(couchdb_admin.NodeAt(c.String("node")), ahr)
+			},
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name: "node",
+					// TODO this should be required
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)
