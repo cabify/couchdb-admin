@@ -1,4 +1,4 @@
-package node
+package couchdb_admin
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ type Node struct {
 	addr string
 }
 
-func At(addr string) *Node {
+func NodeAt(addr string) *Node {
 	n := &Node{
 		addr: fmt.Sprintf("couchdb@%s", addr),
 	}
