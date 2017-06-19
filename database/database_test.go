@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -157,6 +158,18 @@ func TestReplicateAddsReplicaToNode(t *testing.T) {
 		httpmock.NewStringResponder(200, `{
 	"all_nodes": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"],
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]}`))
+
+	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5984/_node/couchdb@127.0.0.2/_config/couchdb/maintenance_mode",
+		func(req *http.Request) (*http.Response, error) {
+			defer req.Body.Close()
+
+			bodyBytes, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, "\"true\"", string(bodyBytes))
+			return httpmock.NewStringResponse(200, ""), nil
+		})
 
 	if err := db.Replicate("00000000-7fffffff", "127.0.0.2", ahr); err != nil {
 		t.Error(err)

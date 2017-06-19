@@ -9,6 +9,7 @@ import (
 
 	"github.com/cabify/couchdb-admin/cluster"
 	"github.com/cabify/couchdb-admin/httpUtils"
+	"github.com/cabify/couchdb-admin/node"
 	"github.com/cabify/couchdb-admin/sliceUtils"
 )
 
@@ -55,22 +56,24 @@ func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) {
 }
 
 func (db *Database) Replicate(shard, replica string, ahr *httpUtils.AuthenticatedHttpRequester) error {
-	replicaNode := fmt.Sprintf("couchdb@%s", replica)
+	replicaNode := node.At(replica)
 
-	if sliceUtils.Contains(db.config.ByNode[replicaNode], shard) {
-		return fmt.Errorf("%s is already replicating %s", replicaNode, shard)
+	if sliceUtils.Contains(db.config.ByNode[replicaNode.GetAddr()], shard) {
+		return fmt.Errorf("%s is already replicating %s", replicaNode.GetAddr(), shard)
 	}
 
 	if _, exists := db.config.ByRange[shard]; !exists {
 		return fmt.Errorf("%s is not a %s's shard!", shard, db.name)
 	}
 
-	if !cluster.LoadCluster(ahr).IsNodeUpAndJoined(replicaNode) {
-		return fmt.Errorf("%s is not part of the cluster!", replicaNode)
+	if !cluster.LoadCluster(ahr).IsNodeUpAndJoined(replicaNode.GetAddr()) {
+		return fmt.Errorf("%s is not part of the cluster!", replicaNode.GetAddr())
 	}
 
-	db.config.ByNode[replicaNode] = append(db.config.ByNode[replicaNode], shard)
-	db.config.ByRange[shard] = append(db.config.ByRange[shard], replicaNode)
+	replicaNode.IntoMaintenance(ahr)
+
+	db.config.ByNode[replicaNode.GetAddr()] = append(db.config.ByNode[replicaNode.GetAddr()], shard)
+	db.config.ByRange[shard] = append(db.config.ByRange[shard], replicaNode.GetAddr())
 	// TODO add an entry to the changes section.
 
 	b, err := json.Marshal(db.config)
@@ -79,6 +82,9 @@ func (db *Database) Replicate(shard, replica string, ahr *httpUtils.Authenticate
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), bytes.NewBuffer(b))
+	if err != nil {
+		log.Fatal(err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	ahr.RunRequest(req, nil)
