@@ -5,3 +5,6 @@ vendor/
 
 # Binary
 couchdb-admin
+
+# Vim
+vim-go-test-compile

@@ -1,28 +1,14 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
 	"os"
 
-	"github.com/cabify/couchdb-admin/array_utils"
 	"github.com/cabify/couchdb-admin/cluster"
-	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/database"
+	"github.com/cabify/couchdb-admin/httpUtils"
 	"github.com/kr/pretty"
 	"github.com/urfave/cli"
 )
-
-type Data struct {
-	Id        string              `json:"_id"`
-	Rev       string              `json:"_rev"`
-	Shards    []int               `json:"shard_suffix"`
-	Changelog [][]string          `json:"changelog"`
-	ByNode    map[string][]string `json:"by_node"`
-	ByRange   map[string][]string `json:"by_range"`
-}
 
 func main() {
 	app := cli.NewApp()
@@ -48,8 +34,12 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
-			Name:   "describe_db",
-			Action: describeDb,
+			Name: "describe_db",
+			Action: func(c *cli.Context) error {
+				db := database.LoadDB(c.String("db"), buildAuthHttpReq(c))
+				pretty.Println(db)
+				return nil
+			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "db",
@@ -59,8 +49,12 @@ func main() {
 			},
 		},
 		{
-			Name:   "replicate",
-			Action: replicate,
+			Name: "replicate",
+			Action: func(c *cli.Context) error {
+				ahr := buildAuthHttpReq(c)
+				db := database.LoadDB(c.String("db"), ahr)
+				return db.Replicate(c.String("shard"), c.String("replica"), ahr)
+			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name: "shard",
@@ -98,8 +92,11 @@ func main() {
 			},
 		},
 		{
-			Name:   "create_db",
-			Action: createDatabase,
+			Name: "create_db",
+			Action: func(c *cli.Context) error {
+				database.CreateDatabase(c.String("db"), c.Int("replicas"), c.Int("shards"), buildAuthHttpReq(c))
+				return nil
+			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name: "db",
@@ -116,8 +113,12 @@ func main() {
 			},
 		},
 		{
-			Name:   "remove_replica",
-			Action: removeReplica,
+			Name: "remove_replica",
+			Action: func(c *cli.Context) error {
+				ahr := buildAuthHttpReq(c)
+				db := database.LoadDB(c.String("db"), ahr)
+				return db.RemoveReplica(c.String("shard"), c.String("from"), ahr)
+			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name: "db",
@@ -138,94 +139,6 @@ func main() {
 	app.Run(os.Args)
 }
 
-func buildAuthHttpReq(c *cli.Context) *http_utils.AuthenticatedHttpRequester {
-	return http_utils.NewAuthenticatedHttpRequester(c.GlobalString("username"), c.GlobalString("password"), c.GlobalString("server"))
-}
-
-func getDbConfig(db string, ahr *http_utils.AuthenticatedHttpRequester) (data Data) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ahr.RunRequest(req, &data)
-
-	return
-}
-
-func describeDb(c *cli.Context) {
-	data := getDbConfig(c.String("db"), buildAuthHttpReq(c))
-	pretty.Println(data)
-}
-
-func replicate(c *cli.Context) error {
-	ahr := buildAuthHttpReq(c)
-	db := c.String("db")
-	data := getDbConfig(db, ahr)
-
-	replica := fmt.Sprintf("couchdb@%s", c.String("replica"))
-	shard := c.String("shard")
-
-	data.ByNode[replica] = append(data.ByNode[replica], shard)
-	data.ByRange[shard] = append(data.ByRange[shard], replica)
-	// TODO add an entry to the changes section.
-	fmt.Printf("%+v\n", data)
-
-	b, err := json.Marshal(data)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db), bytes.NewBuffer(b))
-	req.Header.Set("Content-Type", "application/json")
-
-	ahr.RunRequest(req, nil)
-
-	return nil
-}
-
-func removeReplica(c *cli.Context) error {
-	ahr := buildAuthHttpReq(c)
-	db := c.String("db")
-	shard := c.String("shard")
-	replica := fmt.Sprintf("couchdb@%s", c.String("from"))
-
-	data := getDbConfig(db, ahr)
-
-	data.ByNode[replica] = array_utils.RemoveItem(data.ByNode[replica], shard)
-	if len(data.ByNode[replica]) == 0 {
-		delete(data.ByNode, replica)
-	}
-
-	data.ByRange[shard] = array_utils.RemoveItem(data.ByRange[shard], replica)
-	// TODO add an entry to the changes section.
-	fmt.Printf("%+v\n", data)
-
-	b, err := json.Marshal(data)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db), bytes.NewBuffer(b))
-	req.Header.Set("Content-Type", "application/json")
-
-	ahr.RunRequest(req, nil)
-
-	return nil
-}
-
-func createDatabase(c *cli.Context) error {
-	ahr := buildAuthHttpReq(c)
-	replicas := c.Int("replicas")
-	shards := c.Int("shards")
-	db := c.String("db")
-
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.GetServer(), db, replicas, shards), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ahr.RunRequest(req, nil)
-
-	return nil
+func buildAuthHttpReq(c *cli.Context) *httpUtils.AuthenticatedHttpRequester {
+	return httpUtils.NewAuthenticatedHttpRequester(c.GlobalString("username"), c.GlobalString("password"), c.GlobalString("server"))
 }

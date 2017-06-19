@@ -8,7 +8,7 @@ import (
 
 	httpmock "gopkg.in/jarcoal/httpmock.v1"
 
-	"github.com/cabify/couchdb-admin/http_utils"
+	"github.com/cabify/couchdb-admin/httpUtils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +21,7 @@ func TestLoadClusterLoadsNodesInfo(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1","couchdb@127.0.0.1","couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1","couchdb@127.0.0.1","couchdb@127.0.0.1"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
 	assert.Equal(t, cluster.NodesInfo.AllNodes, []string{"couchdb@127.0.0.1", "couchdb@127.0.0.1", "couchdb@127.0.0.1"})
@@ -37,7 +37,7 @@ func TestAddNodeAddsNode(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
 	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5986/_nodes/couchdb@111.222.333.444",
@@ -63,12 +63,11 @@ func TestAddNodeRejectsToAddAlreadyAddedNode(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
-	if err := cluster.AddNode("127.0.0.1", ahr); err == nil {
-		assert.FailNow(t, "Node should be rejected as is already part of the cluster")
-	}
+	err := cluster.AddNode("127.0.0.1", ahr)
+	assert.Error(t, err, "Node should be rejected as is already part of the cluster")
 }
 
 func TestAddNodeRejoinsNode(t *testing.T) {
@@ -80,7 +79,7 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"]}`))
 
-	ahr := http_utils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
 	cluster := LoadCluster(ahr)
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5986/_nodes/couchdb@111.222.333.444",
@@ -95,7 +94,7 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 			}{}
 
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-				assert.Error(t, err)
+				t.Error(err)
 			}
 
 			if body.Rev == "12345" {
@@ -110,7 +109,7 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"]}`))
 
 	if err := cluster.AddNode("111.222.333.444", ahr); err != nil {
-		assert.Error(t, err)
+		t.Error(err)
 	}
 
 	assert.Equal(t, cluster.NodesInfo.AllNodes, []string{"couchdb@127.0.0.1", "couchdb@111.222.333.444"})

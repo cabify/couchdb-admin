@@ -1,4 +1,9 @@
 package: github.com/cabify/couchdb-admin
+homepage: https://github.com/cabify/couchdb-admin
+owners:
+- name: Carlos Alonso
+  email: carlos.alonso@cabify.com
+  homepage: http://mrcalonso.com
 import:
 - package: github.com/kr/pretty
 - package: github.com/urfave/cli
