@@ -6,6 +6,7 @@ import (
 	"github.com/cabify/couchdb-admin/cluster"
 	"github.com/cabify/couchdb-admin/database"
 	"github.com/cabify/couchdb-admin/httpUtils"
+	"github.com/cabify/couchdb-admin/node"
 	"github.com/kr/pretty"
 	"github.com/urfave/cli"
 )
@@ -134,11 +135,48 @@ func main() {
 				},
 			},
 		},
+		{
+			Name: "disable_maintenance_mode",
+			Action: func(c *cli.Context) error {
+				ahr := buildAuthHttpReq(c)
+				return node.At(c.String("node")).DisableMaintenance(ahr)
+			},
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name: "node",
+					// TODO this should be required
+				},
+			},
+		},
+		{
+			Name: "set_config",
+			Action: func(c *cli.Context) error {
+				return node.At(c.String("node")).SetConfig(c.String("section"), c.String("key"), c.String("value"), buildAuthHttpReq(c))
+			},
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name: "node",
+					// TODO this should be required
+				},
+				cli.StringFlag{
+					Name: "section",
+					// TODO this should be required
+				},
+				cli.StringFlag{
+					Name: "key",
+					// TODO this should be required
+				},
+				cli.StringFlag{
+					Name: "value",
+					// TODO this should be required
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)
 }
 
 func buildAuthHttpReq(c *cli.Context) *httpUtils.AuthenticatedHttpRequester {
-	return httpUtils.NewAuthenticatedHttpRequester(c.GlobalString("username"), c.GlobalString("password"), c.GlobalString("server"))
+	return httpUtils.NewAuthenticatedHttpRequester(c.GlobalString("admin"), c.GlobalString("password"), c.GlobalString("server"))
 }

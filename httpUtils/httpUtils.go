@@ -25,7 +25,7 @@ func NewAuthenticatedHttpRequester(username, password, server string) (ahr *Auth
 	return
 }
 
-func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interface{}) {
+func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interface{}) error {
 	req.SetBasicAuth(a.username, a.password)
 
 	resp, err := a.httpClient.Do(req)
@@ -46,6 +46,8 @@ func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interfac
 	} else {
 		fmt.Printf("Response empty: %v\n", resp)
 	}
+
+	return nil
 }
 
 func (a *AuthenticatedHttpRequester) GetServer() string {
