@@ -1,4 +1,4 @@
-package cluster
+package couchdb_admin
 
 import (
 	"bytes"
@@ -102,4 +102,44 @@ func (cluster *Cluster) IsNodeUpAndJoined(node string) bool {
 		}
 	}
 	return false
+}
+
+func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpRequester) error {
+	var dbs []string
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_all_dbs", ahr.GetServer()), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = ahr.RunRequest(req, &dbs); err != nil {
+		log.Fatal(err)
+	}
+
+	for _, db_name := range dbs {
+		db := LoadDB(db_name, ahr)
+		if _, ok := db.config.ByNode[node.GetAddr()]; ok {
+			return fmt.Errorf("Cannot remove %s because it is replicating db %s", node.GetAddr(), db_name)
+		}
+	}
+
+	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node.GetAddr()), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var nodeInfo struct {
+		ID  string `json:"_id"`
+		Rev string `json:"_rev"`
+	}
+
+	if err = ahr.RunRequest(req, &nodeInfo); err != nil {
+		log.Fatal(err)
+	}
+
+	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.GetServer(), node.GetAddr(), nodeInfo.Rev), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return ahr.RunRequest(req, nil)
 }

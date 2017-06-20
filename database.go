@@ -1,4 +1,4 @@
-package database
+package couchdb_admin
 
 import (
 	"bytes"
@@ -7,9 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/cabify/couchdb-admin/cluster"
 	"github.com/cabify/couchdb-admin/httpUtils"
-	"github.com/cabify/couchdb-admin/node"
 	"github.com/cabify/couchdb-admin/sliceUtils"
 )
 
@@ -56,7 +54,7 @@ func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) {
 }
 
 func (db *Database) Replicate(shard, replica string, ahr *httpUtils.AuthenticatedHttpRequester) error {
-	replicaNode := node.At(replica)
+	replicaNode := NodeAt(replica)
 
 	if sliceUtils.Contains(db.config.ByNode[replicaNode.GetAddr()], shard) {
 		return fmt.Errorf("%s is already replicating %s", replicaNode.GetAddr(), shard)
@@ -66,7 +64,7 @@ func (db *Database) Replicate(shard, replica string, ahr *httpUtils.Authenticate
 		return fmt.Errorf("%s is not a %s's shard!", shard, db.name)
 	}
 
-	if !cluster.LoadCluster(ahr).IsNodeUpAndJoined(replicaNode.GetAddr()) {
+	if !LoadCluster(ahr).IsNodeUpAndJoined(replicaNode.GetAddr()) {
 		return fmt.Errorf("%s is not part of the cluster!", replicaNode.GetAddr())
 	}
 

@@ -1,4 +1,4 @@
-package database
+package couchdb_admin
 
 import (
 	"encoding/json"
