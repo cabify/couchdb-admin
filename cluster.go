@@ -116,7 +116,10 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 	}
 
 	for _, db_name := range dbs {
-		db := LoadDB(db_name, ahr)
+		db, err := LoadDB(db_name, ahr)
+		if err != nil {
+			return fmt.Errorf("Could not access the %s database", db_name)
+		}
 		if _, ok := db.config.ByNode[node.GetAddr()]; ok {
 			return fmt.Errorf("Cannot remove %s because it is replicating db %s", node.GetAddr(), db_name)
 		}

@@ -43,7 +43,10 @@ func TestLoadDBLoadsDB(t *testing.T) {
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	assert.Equal(t, db.name, "testdb")
 	assert.Equal(t, db.config.Id, "testdb")
@@ -89,7 +92,10 @@ func TestCreateDatabaseWorks(t *testing.T) {
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := CreateDatabase("testdb", 1, 2, ahr)
+	db, err := CreateDatabase("testdb", 1, 2, ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	assert.Equal(t, db.name, "testdb")
 	assert.Equal(t, db.config.Id, "testdb")
@@ -152,7 +158,10 @@ func TestReplicateAddsReplicaToNode(t *testing.T) {
 		})
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5984/_membership",
 		httpmock.NewStringResponder(200, `{
@@ -219,9 +228,12 @@ func TestReplicateFailsIfNodeIsAlreadyReplica(t *testing.T) {
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
-	err := db.Replicate("00000000-7fffffff", "127.0.0.1", ahr)
+	err = db.Replicate("00000000-7fffffff", "127.0.0.1", ahr)
 	assert.Error(t, err, "Replica should have been rejected as 127.0.0.1 already contains a replica for the shard")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
@@ -265,9 +277,12 @@ func TestReplicateFailsIfShardDoesNotExist(t *testing.T) {
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
-	err := db.Replicate("dummy_shard", "127.0.0.1", ahr)
+	err = db.Replicate("dummy_shard", "127.0.0.1", ahr)
 	assert.Error(t, err, "Replica should have been rejected as dummy_shard is not an existing DB shard")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
@@ -311,14 +326,17 @@ func TestReplicateFailsIfNodeIsNotPartOfTheCluster(t *testing.T) {
 				"80000000-ffffffff": ["couchdb@127.0.0.1"]}}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5984/_membership",
 		httpmock.NewStringResponder(200, `{
 	"all_nodes": ["couchdb@127.0.0.1"],
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
-	err := db.Replicate("00000000-7fffffff", "dummy_server", ahr)
+	err = db.Replicate("00000000-7fffffff", "dummy_server", ahr)
 	assert.Error(t, err, "Replica should have been rejected as dummy_server is not part of the cluster")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
@@ -376,7 +394,10 @@ func TestRemoveReplicaWorks(t *testing.T) {
 				"80000000-ffffffff": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]}}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5986/_dbs/testdb",
 		func(req *http.Request) (*http.Response, error) {
@@ -437,9 +458,12 @@ func TestRemoveReplicaFailsIfNodeDoesNotContainShard(t *testing.T) {
 		}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
-	err := db.RemoveReplica("dummy_replica", "127.0.0.1", ahr)
+	err = db.RemoveReplica("dummy_replica", "127.0.0.1", ahr)
 	assert.Error(t, err, "Remove replica operation should have been rejected as the replica does not exist!")
 
 	err = db.RemoveReplica("80000000-ffffffff", "dummy_server", ahr)
@@ -478,9 +502,12 @@ func TestRemoveReplicaFailsIfShardWillBeLost(t *testing.T) {
 		}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
-	err := db.RemoveReplica("00000000-7fffffff", "127.0.0.1", ahr)
+	err = db.RemoveReplica("00000000-7fffffff", "127.0.0.1", ahr)
 	assert.Error(t, err, "Remove replica operation should have been rejected as the replica will be lost!")
 
 	assert.Equal(t, db.config.ByNode, map[string][]string{
@@ -522,7 +549,10 @@ func TestRemoveReplicaRemovesNodeIfEmpty(t *testing.T) {
 		}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	db := LoadDB("testdb", ahr)
+	db, err := LoadDB("testdb", ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5986/_dbs/testdb",
 		func(req *http.Request) (*http.Response, error) {
@@ -552,4 +582,16 @@ func TestRemoveReplicaRemovesNodeIfEmpty(t *testing.T) {
 	assert.Equal(t, db.config.ByRange, map[string][]string{
 		"00000000-ffffffff": []string{"couchdb@127.0.0.1"},
 	})
+}
+
+func TestFailureLoadingDBRaisesError(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder("GET", "http://127.0.0.1:5986/_dbs/testdb",
+		httpmock.NewStringResponder(200, `{}`))
+
+	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
+	_, err := LoadDB("testdb", ahr)
+	assert.Error(t, err)
 }

@@ -35,9 +35,13 @@ func main() {
 		{
 			Name: "describe_db",
 			Action: func(c *cli.Context) error {
-				db := couchdb_admin.LoadDB(c.String("db"), buildAuthHttpReq(c))
-				pretty.Println(db)
-				return nil
+				db, err := couchdb_admin.LoadDB(c.String("db"), buildAuthHttpReq(c))
+				if err != nil {
+					return err
+				} else {
+					pretty.Println(db)
+					return nil
+				}
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -51,7 +55,10 @@ func main() {
 			Name: "replicate",
 			Action: func(c *cli.Context) error {
 				ahr := buildAuthHttpReq(c)
-				db := couchdb_admin.LoadDB(c.String("db"), ahr)
+				db, err := couchdb_admin.LoadDB(c.String("db"), ahr)
+				if err != nil {
+					return err
+				}
 				return db.Replicate(c.String("shard"), c.String("replica"), ahr)
 			},
 			Flags: []cli.Flag{
@@ -115,7 +122,10 @@ func main() {
 			Name: "remove_replica",
 			Action: func(c *cli.Context) error {
 				ahr := buildAuthHttpReq(c)
-				db := couchdb_admin.LoadDB(c.String("db"), ahr)
+				db, err := couchdb_admin.LoadDB(c.String("db"), ahr)
+				if err != nil {
+					return err
+				}
 				return db.RemoveReplica(c.String("shard"), c.String("from"), ahr)
 			},
 			Flags: []cli.Flag{

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/cabify/couchdb-admin/httpUtils"
@@ -25,32 +24,44 @@ type Config struct {
 	ByRange   map[string][]string `json:"by_range"`
 }
 
-func LoadDB(name string, ahr *httpUtils.AuthenticatedHttpRequester) *Database {
+func LoadDB(name string, ahr *httpUtils.AuthenticatedHttpRequester) (*Database, error) {
 	db := &Database{
 		name: name,
 	}
-	db.refreshDbConfig(ahr)
-	return db
+	if err := db.refreshDbConfig(ahr); err != nil {
+		return nil, err
+	} else {
+		return db, nil
+	}
 }
 
-func CreateDatabase(name string, replicas, shards int, ahr *httpUtils.AuthenticatedHttpRequester) *Database {
+func CreateDatabase(name string, replicas, shards int, ahr *httpUtils.AuthenticatedHttpRequester) (*Database, error) {
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.GetServer(), name, replicas, shards), nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	ahr.RunRequest(req, nil)
+	if err = ahr.RunRequest(req, nil); err != nil {
+		return nil, err
+	}
 
 	return LoadDB(name, ahr)
 }
 
-func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) {
+func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) error {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	ahr.RunRequest(req, &db.config)
+	if err = ahr.RunRequest(req, &db.config); err != nil {
+		return err
+	}
+
+	if db.config.Id == "" {
+		return fmt.Errorf("Could not retrieve config for db: %s", db.name)
+	}
+	return nil
 }
 
 func (db *Database) Replicate(shard, replica string, ahr *httpUtils.AuthenticatedHttpRequester) error {
@@ -76,18 +87,16 @@ func (db *Database) Replicate(shard, replica string, ahr *httpUtils.Authenticate
 
 	b, err := json.Marshal(db.config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), bytes.NewBuffer(b))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	ahr.RunRequest(req, nil)
-
-	return nil
+	return ahr.RunRequest(req, nil)
 }
 
 func (db *Database) RemoveReplica(shard, from string, ahr *httpUtils.AuthenticatedHttpRequester) error {
@@ -117,16 +126,14 @@ func (db *Database) RemoveReplica(shard, from string, ahr *httpUtils.Authenticat
 
 	b, err := json.Marshal(db.config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), bytes.NewBuffer(b))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	ahr.RunRequest(req, nil)
-
-	return nil
+	return ahr.RunRequest(req, nil)
 }
