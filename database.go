@@ -75,7 +75,12 @@ func (db *Database) Replicate(shard, replica string, ahr *httpUtils.Authenticate
 		return fmt.Errorf("%s is not a %s's shard!", shard, db.name)
 	}
 
-	if !LoadCluster(ahr).IsNodeUpAndJoined(replicaNode.GetAddr()) {
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		return err
+	}
+
+	if !cluster.IsNodeUpAndJoined(replicaNode.GetAddr()) {
 		return fmt.Errorf("%s is not part of the cluster!", replicaNode.GetAddr())
 	}
 

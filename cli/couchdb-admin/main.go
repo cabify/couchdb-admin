@@ -80,8 +80,12 @@ func main() {
 			Name: "add_node",
 			Action: func(c *cli.Context) error {
 				ahr := buildAuthHttpReq(c)
-				couchdb_admin.LoadCluster(ahr).AddNode(c.String("node"), ahr)
-				return nil
+				cluster, err := couchdb_admin.LoadCluster(ahr)
+				if err != nil {
+					return err
+				} else {
+					return cluster.AddNode(c.String("node"), ahr)
+				}
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -93,8 +97,8 @@ func main() {
 		{
 			Name: "describe_cluster",
 			Action: func(c *cli.Context) error {
-				couchdb_admin.LoadCluster(buildAuthHttpReq(c))
-				return nil
+				_, err := couchdb_admin.LoadCluster(buildAuthHttpReq(c))
+				return err
 			},
 		},
 		{
@@ -184,7 +188,12 @@ func main() {
 			Name: "remove_node",
 			Action: func(c *cli.Context) error {
 				ahr := buildAuthHttpReq(c)
-				return couchdb_admin.LoadCluster(ahr).RemoveNode(couchdb_admin.NodeAt(c.String("node")), ahr)
+				cluster, err := couchdb_admin.LoadCluster(ahr)
+				if err != nil {
+					return err
+				} else {
+					return cluster.RemoveNode(couchdb_admin.NodeAt(c.String("node")), ahr)
+				}
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{

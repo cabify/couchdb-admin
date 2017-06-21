@@ -20,25 +20,30 @@ type Nodes struct {
 	ClusterNodes []string `json:"cluster_nodes"`
 }
 
-func LoadCluster(ahr *httpUtils.AuthenticatedHttpRequester) *Cluster {
+func LoadCluster(ahr *httpUtils.AuthenticatedHttpRequester) (*Cluster, error) {
 	cluster := &Cluster{}
-	cluster.refreshNodesInfo(ahr)
-	return cluster
+	if err := cluster.refreshNodesInfo(ahr); err != nil {
+		return nil, err
+	}
+	return cluster, nil
 }
 
-func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) {
+func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) error {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.GetServer()), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var info Nodes
-	ahr.RunRequest(req, &info)
+	if err := ahr.RunRequest(req, &info); err != nil {
+		return err
+	}
 	pretty.Println(c)
 	c.NodesInfo = info
 
 	fmt.Println("Current cluster layout")
 	pretty.Println(c.NodesInfo)
+	return nil
 }
 
 func (cluster *Cluster) knowsNode(node string) bool {

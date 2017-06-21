@@ -22,7 +22,10 @@ func TestLoadClusterLoadsNodesInfo(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1","couchdb@127.0.0.1","couchdb@127.0.0.1"]}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	cluster := LoadCluster(ahr)
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	assert.Equal(t, cluster.NodesInfo.AllNodes, []string{"couchdb@127.0.0.1", "couchdb@127.0.0.1", "couchdb@127.0.0.1"})
 	assert.Equal(t, cluster.NodesInfo.ClusterNodes, []string{"couchdb@127.0.0.1", "couchdb@127.0.0.1", "couchdb@127.0.0.1"})
@@ -38,7 +41,10 @@ func TestAddNodeAddsNode(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	cluster := LoadCluster(ahr)
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("PUT", "http://127.0.0.1:5986/_nodes/couchdb@111.222.333.444",
 		httpmock.NewStringResponder(200, ""))
@@ -48,7 +54,9 @@ func TestAddNodeAddsNode(t *testing.T) {
 	"all_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"],
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"]}`))
 
-	cluster.AddNode("111.222.333.444", ahr)
+	if err = cluster.AddNode("111.222.333.444", ahr); err != nil {
+		t.Error(err)
+	}
 
 	assert.Equal(t, cluster.NodesInfo.AllNodes, []string{"couchdb@127.0.0.1", "couchdb@111.222.333.444"})
 	assert.Equal(t, cluster.NodesInfo.ClusterNodes, []string{"couchdb@127.0.0.1", "couchdb@111.222.333.444"})
@@ -64,9 +72,12 @@ func TestAddNodeRejectsToAddAlreadyAddedNode(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1"]}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	cluster := LoadCluster(ahr)
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
-	err := cluster.AddNode("127.0.0.1", ahr)
+	err = cluster.AddNode("127.0.0.1", ahr)
 	assert.Error(t, err, "Node should be rejected as is already part of the cluster")
 }
 
@@ -80,7 +91,10 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"]}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	cluster := LoadCluster(ahr)
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5986/_nodes/couchdb@111.222.333.444",
 		httpmock.NewStringResponder(200, `{
@@ -108,7 +122,7 @@ func TestAddNodeRejoinsNode(t *testing.T) {
 			"all_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"],
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@111.222.333.444"]}`))
 
-	if err := cluster.AddNode("111.222.333.444", ahr); err != nil {
+	if err = cluster.AddNode("111.222.333.444", ahr); err != nil {
 		t.Error(err)
 	}
 
@@ -126,7 +140,10 @@ func TestRemoveNodeRemovesNode(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	cluster := LoadCluster(ahr)
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5984/_all_dbs",
 		httpmock.NewStringResponder(200, `["_global_changes", "testdb"]`))
@@ -183,7 +200,7 @@ func TestRemoveNodeRemovesNode(t *testing.T) {
 	httpmock.RegisterResponder("DELETE", "http://127.0.0.1:5986/_nodes/couchdb@127.0.0.2?rev=1234567890asdfe",
 		httpmock.NewStringResponder(200, ""))
 
-	if err := cluster.RemoveNode(NodeAt("127.0.0.2"), ahr); err != nil {
+	if err = cluster.RemoveNode(NodeAt("127.0.0.2"), ahr); err != nil {
 		t.Error(err)
 	}
 }
@@ -198,7 +215,10 @@ func TestRemoveNodeRejectsIfNodeHasReplica(t *testing.T) {
 	"cluster_nodes": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]}`))
 
 	ahr := httpUtils.NewAuthenticatedHttpRequester("dummyuser", "dummypassword", "127.0.0.1")
-	cluster := LoadCluster(ahr)
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		t.Error(err)
+	}
 
 	httpmock.RegisterResponder("GET", "http://127.0.0.1:5984/_all_dbs",
 		httpmock.NewStringResponder(200, `["_global_changes", "testdb"]`))
@@ -255,6 +275,6 @@ func TestRemoveNodeRejectsIfNodeHasReplica(t *testing.T) {
 				"00000000-ffffffff": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]
 			}}`))
 
-	err := cluster.RemoveNode(NodeAt("127.0.0.2"), ahr)
+	err = cluster.RemoveNode(NodeAt("127.0.0.2"), ahr)
 	assert.Error(t, err)
 }
