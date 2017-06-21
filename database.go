@@ -36,7 +36,7 @@ func LoadDB(name string, ahr *httpUtils.AuthenticatedHttpRequester) (*Database, 
 }
 
 func CreateDatabase(name string, replicas, shards int, ahr *httpUtils.AuthenticatedHttpRequester) (*Database, error) {
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.GetServer(), name, replicas, shards), nil)
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.Server(), name, replicas, shards), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func CreateDatabase(name string, replicas, shards int, ahr *httpUtils.Authentica
 }
 
 func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) error {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.Server(), db.name), nil)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (db *Database) Replicate(shard, replica string, ahr *httpUtils.Authenticate
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), bytes.NewBuffer(b))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.Server(), db.name), bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (db *Database) RemoveReplica(shard, from string, ahr *httpUtils.Authenticat
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), bytes.NewBuffer(b))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.Server(), db.name), bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}

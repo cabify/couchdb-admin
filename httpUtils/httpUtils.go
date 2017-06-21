@@ -49,6 +49,6 @@ func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interfac
 	return nil
 }
 
-func (a *AuthenticatedHttpRequester) GetServer() string {
+func (a *AuthenticatedHttpRequester) Server() string {
 	return a.server
 }

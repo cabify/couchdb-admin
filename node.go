@@ -37,7 +37,7 @@ func (n *Node) setMaintenanceFlag(value bool, ahr *httpUtils.AuthenticatedHttpRe
 }
 
 func (n *Node) SetConfig(section, key, value string, ahr *httpUtils.AuthenticatedHttpRequester) error {
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/_node/%s/_config/%s/%s", ahr.GetServer(), n.addr, section, key),
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/_node/%s/_config/%s/%s", ahr.Server(), n.addr, section, key),
 		strings.NewReader(fmt.Sprintf("\"%s\"", value)))
 	if err != nil {
 		return err

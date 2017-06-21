@@ -28,7 +28,7 @@ func LoadCluster(ahr *httpUtils.AuthenticatedHttpRequester) (*Cluster, error) {
 }
 
 func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) error {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.GetServer()), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.Server()), nil)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (cluster *Cluster) knowsNode(node string) bool {
 }
 
 func getLastRevForNode(node string, ahr *httpUtils.AuthenticatedHttpRequester) (string, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.Server(), node), nil)
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +91,7 @@ func (cluster *Cluster) AddNode(nodeAddr string, ahr *httpUtils.AuthenticatedHtt
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), bytes.NewReader(body_bytes))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.Server(), node), bytes.NewReader(body_bytes))
 
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func (cluster *Cluster) IsNodeUpAndJoined(node string) bool {
 
 func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpRequester) error {
 	var dbs []string
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_all_dbs", ahr.GetServer()), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_all_dbs", ahr.Server()), nil)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 		}
 	}
 
-	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node.Addr()), nil)
+	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.Server(), node.Addr()), nil)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 		return err
 	}
 
-	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.GetServer(), node.Addr(), nodeInfo.Rev), nil)
+	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.Server(), node.Addr(), nodeInfo.Rev), nil)
 	if err != nil {
 		return err
 	}
