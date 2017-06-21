@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/apex/log"
 	"github.com/cabify/couchdb-admin/httpUtils"
-	"github.com/kr/pretty"
 )
 
 type Cluster struct {
@@ -37,11 +37,8 @@ func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) er
 	if err := ahr.RunRequest(req, &info); err != nil {
 		return err
 	}
-	pretty.Println(c)
 	c.NodesInfo = info
 
-	fmt.Println("Current cluster layout")
-	pretty.Println(c.NodesInfo)
 	return nil
 }
 
@@ -92,17 +89,17 @@ func (cluster *Cluster) AddNode(nodeAddr string, ahr *httpUtils.AuthenticatedHtt
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.Server(), node), bytes.NewReader(body_bytes))
-
+	// TODO if the node cannot be added a 201 is returned but the node won't appear fully joined in _membership. Handle this situation here.
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	ahr.RunRequest(req, nil)
+	if err = ahr.RunRequest(req, nil); err != nil {
+		return err
+	}
 
-	cluster.refreshNodesInfo(ahr)
-
-	return nil
+	return cluster.refreshNodesInfo(ahr)
 }
 
 func (cluster *Cluster) IsNodeUpAndJoined(node string) bool {
@@ -121,11 +118,13 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 		return err
 	}
 
+	log.WithField("node", node.Addr()).Info("Checking that node does not own any shard...")
 	if err = ahr.RunRequest(req, &dbs); err != nil {
 		return err
 	}
 
 	for _, db_name := range dbs {
+		log.WithFields(log.Fields{"node": node.Addr(), "db": db_name}).Debug("Checking database shards ownership...")
 		db, err := LoadDB(db_name, ahr)
 		if err != nil {
 			return fmt.Errorf("Could not access the %s database", db_name)

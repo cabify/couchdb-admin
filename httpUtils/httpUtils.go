@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/apex/log"
 )
 
 type AuthenticatedHttpRequester struct {
@@ -27,13 +29,15 @@ func NewAuthenticatedHttpRequester(username, password, server string) (ahr *Auth
 func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interface{}) error {
 	req.SetBasicAuth(a.username, a.password)
 
+	log.WithFields(log.Fields{"URL": req.URL, "method": req.Method}).Debug("Sending request...")
+
 	resp, err := a.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
 
 	if resp.StatusCode/100 != 2 {
-		fmt.Errorf("Received response %d for %s", resp.StatusCode, req.URL.String())
+		return fmt.Errorf("Received response %d for %s", resp.StatusCode, req.URL.String())
 	}
 
 	defer resp.Body.Close()
@@ -42,8 +46,6 @@ func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interfac
 		if err = json.NewDecoder(resp.Body).Decode(dest); err != nil {
 			return err
 		}
-	} else {
-		fmt.Printf("Response empty: %v\n", resp)
 	}
 
 	return nil
