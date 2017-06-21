@@ -130,12 +130,12 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 		if err != nil {
 			return fmt.Errorf("Could not access the %s database", db_name)
 		}
-		if _, ok := db.config.ByNode[node.GetAddr()]; ok {
-			return fmt.Errorf("Cannot remove %s because it is replicating db %s", node.GetAddr(), db_name)
+		if _, ok := db.config.ByNode[node.Addr()]; ok {
+			return fmt.Errorf("Cannot remove %s because it is replicating db %s", node.Addr(), db_name)
 		}
 	}
 
-	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node.GetAddr()), nil)
+	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node.Addr()), nil)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 		return err
 	}
 
-	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.GetServer(), node.GetAddr(), nodeInfo.Rev), nil)
+	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.GetServer(), node.Addr(), nodeInfo.Rev), nil)
 	if err != nil {
 		return err
 	}

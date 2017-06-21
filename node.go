@@ -24,7 +24,7 @@ func (n *Node) IntoMaintenance(ahr *httpUtils.AuthenticatedHttpRequester) error 
 	return n.setMaintenanceFlag(true, ahr)
 }
 
-func (n *Node) GetAddr() string {
+func (n *Node) Addr() string {
 	return n.addr
 }
 

@@ -70,8 +70,8 @@ func (db *Database) Replicate(shard, replica string, ahr *httpUtils.Authenticate
 		return err
 	}
 
-	if sliceUtils.Contains(db.config.ByNode[replicaNode.GetAddr()], shard) {
-		return fmt.Errorf("%s is already replicating %s", replicaNode.GetAddr(), shard)
+	if sliceUtils.Contains(db.config.ByNode[replicaNode.Addr()], shard) {
+		return fmt.Errorf("%s is already replicating %s", replicaNode.Addr(), shard)
 	}
 
 	if _, exists := db.config.ByRange[shard]; !exists {
@@ -83,14 +83,14 @@ func (db *Database) Replicate(shard, replica string, ahr *httpUtils.Authenticate
 		return err
 	}
 
-	if !cluster.IsNodeUpAndJoined(replicaNode.GetAddr()) {
-		return fmt.Errorf("%s is not part of the cluster!", replicaNode.GetAddr())
+	if !cluster.IsNodeUpAndJoined(replicaNode.Addr()) {
+		return fmt.Errorf("%s is not part of the cluster!", replicaNode.Addr())
 	}
 
 	replicaNode.IntoMaintenance(ahr)
 
-	db.config.ByNode[replicaNode.GetAddr()] = append(db.config.ByNode[replicaNode.GetAddr()], shard)
-	db.config.ByRange[shard] = append(db.config.ByRange[shard], replicaNode.GetAddr())
+	db.config.ByNode[replicaNode.Addr()] = append(db.config.ByNode[replicaNode.Addr()], shard)
+	db.config.ByRange[shard] = append(db.config.ByRange[shard], replicaNode.Addr())
 	// TODO add an entry to the changes section.
 
 	b, err := json.Marshal(db.config)
