@@ -2,7 +2,6 @@ package couchdb_admin
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,11 +13,11 @@ type Node struct {
 	addr string
 }
 
-func NodeAt(addr string) *Node {
+func NodeAt(addr string) (*Node, error) {
 	n := &Node{
 		addr: fmt.Sprintf("couchdb@%s", addr),
 	}
-	return n
+	return n, nil
 }
 
 func (n *Node) IntoMaintenance(ahr *httpUtils.AuthenticatedHttpRequester) error {
@@ -41,7 +40,7 @@ func (n *Node) SetConfig(section, key, value string, ahr *httpUtils.Authenticate
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/_node/%s/_config/%s/%s", ahr.GetServer(), n.addr, section, key),
 		strings.NewReader(fmt.Sprintf("\"%s\"", value)))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	return ahr.RunRequest(req, nil)

@@ -200,7 +200,12 @@ func TestRemoveNodeRemovesNode(t *testing.T) {
 	httpmock.RegisterResponder("DELETE", "http://127.0.0.1:5986/_nodes/couchdb@127.0.0.2?rev=1234567890asdfe",
 		httpmock.NewStringResponder(200, ""))
 
-	if err = cluster.RemoveNode(NodeAt("127.0.0.2"), ahr); err != nil {
+	node, err := NodeAt("127.0.0.2")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err = cluster.RemoveNode(node, ahr); err != nil {
 		t.Error(err)
 	}
 }
@@ -275,6 +280,11 @@ func TestRemoveNodeRejectsIfNodeHasReplica(t *testing.T) {
 				"00000000-ffffffff": ["couchdb@127.0.0.1", "couchdb@127.0.0.2"]
 			}}`))
 
-	err = cluster.RemoveNode(NodeAt("127.0.0.2"), ahr)
+	node, err := NodeAt("127.0.0.2")
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = cluster.RemoveNode(node, ahr)
 	assert.Error(t, err)
 }

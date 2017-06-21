@@ -151,7 +151,12 @@ func main() {
 			Name: "disable_maintenance_mode",
 			Action: func(c *cli.Context) error {
 				ahr := buildAuthHttpReq(c)
-				return couchdb_admin.NodeAt(c.String("node")).DisableMaintenance(ahr)
+				node, err := couchdb_admin.NodeAt(c.String("node"))
+				if err != nil {
+					return err
+				} else {
+					return node.DisableMaintenance(ahr)
+				}
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -163,7 +168,12 @@ func main() {
 		{
 			Name: "set_config",
 			Action: func(c *cli.Context) error {
-				return couchdb_admin.NodeAt(c.String("node")).SetConfig(c.String("section"), c.String("key"), c.String("value"), buildAuthHttpReq(c))
+				node, err := couchdb_admin.NodeAt(c.String("node"))
+				if err != nil {
+					return err
+				} else {
+					return node.SetConfig(c.String("section"), c.String("key"), c.String("value"), buildAuthHttpReq(c))
+				}
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -192,7 +202,12 @@ func main() {
 				if err != nil {
 					return err
 				} else {
-					return cluster.RemoveNode(couchdb_admin.NodeAt(c.String("node")), ahr)
+					node, err := couchdb_admin.NodeAt(c.String("node"))
+					if err != nil {
+						return err
+					} else {
+						return cluster.RemoveNode(node, ahr)
+					}
 				}
 			},
 			Flags: []cli.Flag{

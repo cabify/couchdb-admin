@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/cabify/couchdb-admin/httpUtils"
@@ -31,7 +30,7 @@ func LoadCluster(ahr *httpUtils.AuthenticatedHttpRequester) (*Cluster, error) {
 func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) error {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.GetServer()), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var info Nodes
@@ -55,18 +54,20 @@ func (cluster *Cluster) knowsNode(node string) bool {
 	return false
 }
 
-func getLastRevForNode(node string, ahr *httpUtils.AuthenticatedHttpRequester) string {
+func getLastRevForNode(node string, ahr *httpUtils.AuthenticatedHttpRequester) (string, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), nil)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	var nodeDetails = struct {
 		Rev string `json:"_rev"`
 	}{}
 
-	ahr.RunRequest(req, &nodeDetails)
-	return nodeDetails.Rev
+	if err = ahr.RunRequest(req, &nodeDetails); err != nil {
+		return "", err
+	}
+	return nodeDetails.Rev, nil
 }
 
 func (cluster *Cluster) AddNode(nodeAddr string, ahr *httpUtils.AuthenticatedHttpRequester) error {
@@ -78,18 +79,22 @@ func (cluster *Cluster) AddNode(nodeAddr string, ahr *httpUtils.AuthenticatedHtt
 
 	body := make(map[string]string)
 	if cluster.knowsNode(node) {
-		body["_rev"] = getLastRevForNode(node, ahr)
+		rev, err := getLastRevForNode(node, ahr)
+		if err != nil {
+			return err
+		}
+		body["_rev"] = rev
 	}
 
 	body_bytes, err := json.Marshal(body)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), bytes.NewReader(body_bytes))
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -113,11 +118,11 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 	var dbs []string
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_all_dbs", ahr.GetServer()), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if err = ahr.RunRequest(req, &dbs); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for _, db_name := range dbs {
@@ -132,7 +137,7 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 
 	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node.GetAddr()), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var nodeInfo struct {
@@ -141,12 +146,12 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 	}
 
 	if err = ahr.RunRequest(req, &nodeInfo); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.GetServer(), node.GetAddr(), nodeInfo.Rev), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	return ahr.RunRequest(req, nil)

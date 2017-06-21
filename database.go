@@ -65,7 +65,10 @@ func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) e
 }
 
 func (db *Database) Replicate(shard, replica string, ahr *httpUtils.AuthenticatedHttpRequester) error {
-	replicaNode := NodeAt(replica)
+	replicaNode, err := NodeAt(replica)
+	if err != nil {
+		return err
+	}
 
 	if sliceUtils.Contains(db.config.ByNode[replicaNode.GetAddr()], shard) {
 		return fmt.Errorf("%s is already replicating %s", replicaNode.GetAddr(), shard)

@@ -3,7 +3,6 @@ package httpUtils
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -30,18 +29,18 @@ func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interfac
 
 	resp, err := a.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if resp.StatusCode/100 != 2 {
-		log.Fatalf("Received response %d for %s", resp.StatusCode, req.URL.String())
+		fmt.Errorf("Received response %d for %s", resp.StatusCode, req.URL.String())
 	}
 
 	defer resp.Body.Close()
 
 	if dest != nil {
 		if err = json.NewDecoder(resp.Body).Decode(dest); err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else {
 		fmt.Printf("Response empty: %v\n", resp)
