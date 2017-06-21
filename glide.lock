@@ -1,10 +1,14 @@
-hash: 18e2e40b402307d7c76c46eb04fa08b7d62478e354c708df041fc6da461d61a2
-updated: 2017-06-07T18:39:53.058852189+02:00
+hash: d6ad343e324298c7a5f29332bcee5be6536dcf8e8475aae2ff4b5bfc82810fed
+updated: 2017-06-21T19:00:24.80729199+02:00
 imports:
+- name: github.com/apex/log
+  version: 8f3a15d95392c8fc202d1e1059f46df21dff2992
 - name: github.com/kr/pretty
   version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
 - name: github.com/kr/text
   version: 7cafcd837844e784b526369c9bce262804aebc60
+- name: github.com/pkg/errors
+  version: c605e284fe17294bda444b34710735b29d1a9d90
 - name: github.com/urfave/cli
   version: d70f47eeca3afd795160003bc6e28b001d60c67c
 testImports:
