@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/cabify/couchdb-admin/httpUtils"
@@ -25,69 +24,87 @@ type Config struct {
 	ByRange   map[string][]string `json:"by_range"`
 }
 
-func LoadDB(name string, ahr *httpUtils.AuthenticatedHttpRequester) *Database {
+func LoadDB(name string, ahr *httpUtils.AuthenticatedHttpRequester) (*Database, error) {
 	db := &Database{
 		name: name,
 	}
-	db.refreshDbConfig(ahr)
-	return db
+	if err := db.refreshDbConfig(ahr); err != nil {
+		return nil, err
+	} else {
+		return db, nil
+	}
 }
 
-func CreateDatabase(name string, replicas, shards int, ahr *httpUtils.AuthenticatedHttpRequester) *Database {
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.GetServer(), name, replicas, shards), nil)
+func CreateDatabase(name string, replicas, shards int, ahr *httpUtils.AuthenticatedHttpRequester) (*Database, error) {
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5984/%s?n=%d&q=%d", ahr.Server(), name, replicas, shards), nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	ahr.RunRequest(req, nil)
+	if err = ahr.RunRequest(req, nil); err != nil {
+		return nil, err
+	}
 
 	return LoadDB(name, ahr)
 }
 
-func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), nil)
+func (db *Database) refreshDbConfig(ahr *httpUtils.AuthenticatedHttpRequester) error {
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.Server(), db.name), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	ahr.RunRequest(req, &db.config)
+	if err = ahr.RunRequest(req, &db.config); err != nil {
+		return err
+	}
+
+	if db.config.Id == "" {
+		return fmt.Errorf("Could not retrieve config for db: %s", db.name)
+	}
+	return nil
 }
 
 func (db *Database) Replicate(shard, replica string, ahr *httpUtils.AuthenticatedHttpRequester) error {
-	replicaNode := NodeAt(replica)
+	replicaNode, err := NodeAt(replica)
+	if err != nil {
+		return err
+	}
 
-	if sliceUtils.Contains(db.config.ByNode[replicaNode.GetAddr()], shard) {
-		return fmt.Errorf("%s is already replicating %s", replicaNode.GetAddr(), shard)
+	if sliceUtils.Contains(db.config.ByNode[replicaNode.Addr()], shard) {
+		return fmt.Errorf("%s is already replicating %s", replicaNode.Addr(), shard)
 	}
 
 	if _, exists := db.config.ByRange[shard]; !exists {
 		return fmt.Errorf("%s is not a %s's shard!", shard, db.name)
 	}
 
-	if !LoadCluster(ahr).IsNodeUpAndJoined(replicaNode.GetAddr()) {
-		return fmt.Errorf("%s is not part of the cluster!", replicaNode.GetAddr())
+	cluster, err := LoadCluster(ahr)
+	if err != nil {
+		return err
+	}
+
+	if !cluster.IsNodeUpAndJoined(replicaNode.Addr()) {
+		return fmt.Errorf("%s is not part of the cluster!", replicaNode.Addr())
 	}
 
 	replicaNode.IntoMaintenance(ahr)
 
-	db.config.ByNode[replicaNode.GetAddr()] = append(db.config.ByNode[replicaNode.GetAddr()], shard)
-	db.config.ByRange[shard] = append(db.config.ByRange[shard], replicaNode.GetAddr())
+	db.config.ByNode[replicaNode.Addr()] = append(db.config.ByNode[replicaNode.Addr()], shard)
+	db.config.ByRange[shard] = append(db.config.ByRange[shard], replicaNode.Addr())
 	// TODO add an entry to the changes section.
 
 	b, err := json.Marshal(db.config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), bytes.NewBuffer(b))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.Server(), db.name), bytes.NewBuffer(b))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	ahr.RunRequest(req, nil)
-
-	return nil
+	return ahr.RunRequest(req, nil)
 }
 
 func (db *Database) RemoveReplica(shard, from string, ahr *httpUtils.AuthenticatedHttpRequester) error {
@@ -117,16 +134,14 @@ func (db *Database) RemoveReplica(shard, from string, ahr *httpUtils.Authenticat
 
 	b, err := json.Marshal(db.config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.GetServer(), db.name), bytes.NewBuffer(b))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_dbs/%s", ahr.Server(), db.name), bytes.NewBuffer(b))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	ahr.RunRequest(req, nil)
-
-	return nil
+	return ahr.RunRequest(req, nil)
 }

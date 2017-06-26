@@ -3,9 +3,10 @@ package httpUtils
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/apex/log"
 )
 
 type AuthenticatedHttpRequester struct {
@@ -28,28 +29,28 @@ func NewAuthenticatedHttpRequester(username, password, server string) (ahr *Auth
 func (a *AuthenticatedHttpRequester) RunRequest(req *http.Request, dest interface{}) error {
 	req.SetBasicAuth(a.username, a.password)
 
+	log.WithFields(log.Fields{"URL": req.URL, "method": req.Method}).Debug("Sending request...")
+
 	resp, err := a.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if resp.StatusCode/100 != 2 {
-		log.Fatalf("Received response %d for %s", resp.StatusCode, req.URL.String())
+		return fmt.Errorf("Received response %d for %s", resp.StatusCode, req.URL.String())
 	}
 
 	defer resp.Body.Close()
 
 	if dest != nil {
 		if err = json.NewDecoder(resp.Body).Decode(dest); err != nil {
-			log.Fatal(err)
+			return err
 		}
-	} else {
-		fmt.Printf("Response empty: %v\n", resp)
 	}
 
 	return nil
 }
 
-func (a *AuthenticatedHttpRequester) GetServer() string {
+func (a *AuthenticatedHttpRequester) Server() string {
 	return a.server
 }

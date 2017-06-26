@@ -7,6 +7,9 @@ owners:
 import:
 - package: github.com/kr/pretty
 - package: github.com/urfave/cli
+- package: github.com/apex/log
 testImport:
-- package: github.com/stretchr/testify/assert
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
 - package: gopkg.in/jarcoal/httpmock.v1

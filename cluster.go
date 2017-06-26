@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/apex/log"
 	"github.com/cabify/couchdb-admin/httpUtils"
-	"github.com/kr/pretty"
 )
 
 type Cluster struct {
@@ -20,25 +19,27 @@ type Nodes struct {
 	ClusterNodes []string `json:"cluster_nodes"`
 }
 
-func LoadCluster(ahr *httpUtils.AuthenticatedHttpRequester) *Cluster {
+func LoadCluster(ahr *httpUtils.AuthenticatedHttpRequester) (*Cluster, error) {
 	cluster := &Cluster{}
-	cluster.refreshNodesInfo(ahr)
-	return cluster
+	if err := cluster.refreshNodesInfo(ahr); err != nil {
+		return nil, err
+	}
+	return cluster, nil
 }
 
-func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.GetServer()), nil)
+func (c *Cluster) refreshNodesInfo(ahr *httpUtils.AuthenticatedHttpRequester) error {
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_membership", ahr.Server()), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var info Nodes
-	ahr.RunRequest(req, &info)
-	pretty.Println(c)
+	if err := ahr.RunRequest(req, &info); err != nil {
+		return err
+	}
 	c.NodesInfo = info
 
-	fmt.Println("Current cluster layout")
-	pretty.Println(c.NodesInfo)
+	return nil
 }
 
 func (cluster *Cluster) knowsNode(node string) bool {
@@ -50,18 +51,20 @@ func (cluster *Cluster) knowsNode(node string) bool {
 	return false
 }
 
-func getLastRevForNode(node string, ahr *httpUtils.AuthenticatedHttpRequester) string {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), nil)
+func getLastRevForNode(node string, ahr *httpUtils.AuthenticatedHttpRequester) (string, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.Server(), node), nil)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	var nodeDetails = struct {
 		Rev string `json:"_rev"`
 	}{}
 
-	ahr.RunRequest(req, &nodeDetails)
-	return nodeDetails.Rev
+	if err = ahr.RunRequest(req, &nodeDetails); err != nil {
+		return "", err
+	}
+	return nodeDetails.Rev, nil
 }
 
 func (cluster *Cluster) AddNode(nodeAddr string, ahr *httpUtils.AuthenticatedHttpRequester) error {
@@ -73,26 +76,30 @@ func (cluster *Cluster) AddNode(nodeAddr string, ahr *httpUtils.AuthenticatedHtt
 
 	body := make(map[string]string)
 	if cluster.knowsNode(node) {
-		body["_rev"] = getLastRevForNode(node, ahr)
+		rev, err := getLastRevForNode(node, ahr)
+		if err != nil {
+			return err
+		}
+		body["_rev"] = rev
 	}
 
 	body_bytes, err := json.Marshal(body)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node), bytes.NewReader(body_bytes))
-
+	req, err := http.NewRequest("PUT", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.Server(), node), bytes.NewReader(body_bytes))
+	// TODO if the node cannot be added a 201 is returned but the node won't appear fully joined in _membership. Handle this situation here.
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	ahr.RunRequest(req, nil)
+	if err = ahr.RunRequest(req, nil); err != nil {
+		return err
+	}
 
-	cluster.refreshNodesInfo(ahr)
-
-	return nil
+	return cluster.refreshNodesInfo(ahr)
 }
 
 func (cluster *Cluster) IsNodeUpAndJoined(node string) bool {
@@ -106,25 +113,30 @@ func (cluster *Cluster) IsNodeUpAndJoined(node string) bool {
 
 func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpRequester) error {
 	var dbs []string
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_all_dbs", ahr.GetServer()), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:5984/_all_dbs", ahr.Server()), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
+	log.WithField("node", node.Addr()).Info("Checking that node does not own any shard...")
 	if err = ahr.RunRequest(req, &dbs); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for _, db_name := range dbs {
-		db := LoadDB(db_name, ahr)
-		if _, ok := db.config.ByNode[node.GetAddr()]; ok {
-			return fmt.Errorf("Cannot remove %s because it is replicating db %s", node.GetAddr(), db_name)
+		log.WithFields(log.Fields{"node": node.Addr(), "db": db_name}).Debug("Checking database shards ownership...")
+		db, err := LoadDB(db_name, ahr)
+		if err != nil {
+			return fmt.Errorf("Could not access the %s database", db_name)
+		}
+		if _, ok := db.config.ByNode[node.Addr()]; ok {
+			return fmt.Errorf("Cannot remove %s because it is replicating db %s", node.Addr(), db_name)
 		}
 	}
 
-	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.GetServer(), node.GetAddr()), nil)
+	req, err = http.NewRequest("GET", fmt.Sprintf("http://%s:5986/_nodes/%s", ahr.Server(), node.Addr()), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var nodeInfo struct {
@@ -133,12 +145,12 @@ func (cluster *Cluster) RemoveNode(node *Node, ahr *httpUtils.AuthenticatedHttpR
 	}
 
 	if err = ahr.RunRequest(req, &nodeInfo); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.GetServer(), node.GetAddr(), nodeInfo.Rev), nil)
+	req, err = http.NewRequest("DELETE", fmt.Sprintf("http://%s:5986/_nodes/%s?rev=%s", ahr.Server(), node.Addr(), nodeInfo.Rev), nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	return ahr.RunRequest(req, nil)
