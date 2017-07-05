@@ -13,6 +13,11 @@ import (
 
 func main() {
 	app := cli.NewApp()
+	app.Name = "CouchDB 2 Admin tool"
+	app.Usage = "Easily operate a CouchDB 2 cluster"
+	app.UsageText = "$ couchdb-admin [COMMAND] [OPTIONS]"
+	app.Version = "0.0.1"
+	app.Authors = []cli.Author{cli.Author{Name: "Carlos Alonso", Email: "carlos.alonso@cabify.com"}}
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -34,7 +39,8 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
-			Name: "describe_db",
+			Name:  "describe_db",
+			Usage: "Get a db's shards placement info",
 			Action: func(c *cli.Context) {
 				db_name := c.String("db")
 				log.WithField("db", db_name).Info("Describing database...")
@@ -56,7 +62,8 @@ func main() {
 			},
 		},
 		{
-			Name: "replicate",
+			Name:  "replicate",
+			Usage: "Replicate a database's shard into a node not containing it already",
 			Action: func(c *cli.Context) {
 				db_name := c.String("db")
 				shard := c.String("shard")
@@ -79,13 +86,16 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "shard",
+					Name:  "shard",
+					Usage: "Shard's identifier to replicate",
 				},
 				cli.StringFlag{
-					Name: "replica",
+					Name:  "replica",
+					Usage: "Node's address where to replicate the shard",
 				},
 				cli.StringFlag{
-					Name: "db",
+					Name:  "db",
+					Usage: "Db to where the shard belongs to",
 				},
 			},
 			Before: func(c *cli.Context) error {
@@ -93,7 +103,8 @@ func main() {
 			},
 		},
 		{
-			Name: "add_node",
+			Name:  "add_node",
+			Usage: "Join a node into the cluster",
 			Action: func(c *cli.Context) {
 				node := c.String("node")
 				log.WithField("node", node).Info("Adding node to the cluster...")
@@ -112,7 +123,8 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "node",
+					Name:  "node",
+					Usage: "Node's address",
 				},
 			},
 			Before: func(c *cli.Context) error {
@@ -120,7 +132,8 @@ func main() {
 			},
 		},
 		{
-			Name: "describe_cluster",
+			Name:  "describe_cluster",
+			Usage: "Get information of the cluster's nodes",
 			Action: func(c *cli.Context) {
 				log.WithField("server", c.GlobalString("server")).Info("Describing cluster layout...")
 				cluster, err := couchdb_admin.LoadCluster(buildAuthHttpReq(c))
@@ -132,7 +145,8 @@ func main() {
 			},
 		},
 		{
-			Name: "create_db",
+			Name:  "create_db",
+			Usage: "Create a new database",
 			Action: func(c *cli.Context) {
 				db := c.String("db")
 				replicas, shards := c.Int("replicas"), c.Int("shards")
@@ -146,14 +160,17 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "db",
+					Name:  "db",
+					Usage: "The database name",
 				},
 				cli.IntFlag{
 					Name:  "shards",
+					Usage: "Number of shards to distribute the database across",
 					Value: 8,
 				},
 				cli.IntFlag{
 					Name:  "replicas",
+					Usage: "Number of replicas for each shard",
 					Value: 3,
 				},
 			},
@@ -162,7 +179,8 @@ func main() {
 			},
 		},
 		{
-			Name: "remove_replica",
+			Name:  "remove_replica",
+			Usage: "Remove a shard from a particular node",
 			Action: func(c *cli.Context) {
 				db_name := c.String("db")
 				shard := c.String("shard")
@@ -184,13 +202,16 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "db",
+					Name:  "db",
+					Usage: "The database to where the shard belongs to",
 				},
 				cli.StringFlag{
-					Name: "shard",
+					Name:  "shard",
+					Usage: "Name of the shard to remove from the node",
 				},
 				cli.StringFlag{
-					Name: "from",
+					Name:  "from",
+					Usage: "Node's address from where to remove the shard's replica",
 				},
 			},
 			Before: func(c *cli.Context) error {
@@ -198,7 +219,8 @@ func main() {
 			},
 		},
 		{
-			Name: "disable_maintenance_mode",
+			Name:  "disable_maintenance_mode",
+			Usage: "Disable a node's maintenance mode",
 			Action: func(c *cli.Context) {
 				node_name := c.String("node")
 				log.WithField("node", node_name).Info("Removing maintenance flag...")
@@ -217,7 +239,8 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "node",
+					Name:  "node",
+					Usage: "The node's address",
 				},
 			},
 			Before: func(c *cli.Context) error {
@@ -225,7 +248,8 @@ func main() {
 			},
 		},
 		{
-			Name: "set_config",
+			Name:  "set_config",
+			Usage: "Set a config value of a particular node",
 			Action: func(c *cli.Context) {
 				node_name := c.String("node")
 				section := c.String("section")
@@ -243,16 +267,20 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "node",
+					Name:  "node",
+					Usage: "The node's address",
 				},
 				cli.StringFlag{
-					Name: "section",
+					Name:  "section",
+					Usage: "CouchDB config's section where to apply the config",
 				},
 				cli.StringFlag{
-					Name: "key",
+					Name:  "key",
+					Usage: "Key for the config value to apply",
 				},
 				cli.StringFlag{
-					Name: "value",
+					Name:  "value",
+					Usage: "The actual config value to apply",
 				},
 			},
 			Before: func(c *cli.Context) error {
@@ -260,7 +288,8 @@ func main() {
 			},
 		},
 		{
-			Name: "remove_node",
+			Name:  "remove_node",
+			Usage: "Remove a node from the cluster",
 			Action: func(c *cli.Context) {
 				node_name := c.String("node")
 				log.WithField("node", node_name).Info("Removing node...")
@@ -284,7 +313,8 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "node",
+					Name:  "node",
+					Usage: "The node's address",
 				},
 			},
 			Before: func(c *cli.Context) error {
