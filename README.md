@@ -353,4 +353,13 @@ $ couchdb-admin describe_db --db=mydb
 
 `couchdb-admin` currently uses [Glide](http://glide.sh/) for vendoring.
 
+## Developing couchdb-admin
 
+If you wish to work on couchdb-admin you'll first need Go installed (version 1.8+ is required). Make sure you have Go properly installed, including setting up your GOPATH.
+
+Next, clone this repository into $GOPATH/src/github.com/cabify/couchdb-admin. Then enter into the directory `cli/couchdb-admin` and type:
+```
+$ make all
+```
+
+This will generate a binary file `couchdb-admin` which you can now play with. In case you are running on macOS type `make darwin` instead.
