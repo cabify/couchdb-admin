@@ -16,7 +16,7 @@ func main() {
 	app.Name = "CouchDB 2 Admin tool"
 	app.Usage = "Easily operate a CouchDB 2 cluster"
 	app.UsageText = "$ couchdb-admin [COMMAND] [OPTIONS]"
-	app.Version = "0.0.1"
+	app.Version = "0.1.0"
 	app.Authors = []cli.Author{cli.Author{Name: "Carlos Alonso", Email: "carlos.alonso@cabify.com"}}
 
 	app.Flags = []cli.Flag{
